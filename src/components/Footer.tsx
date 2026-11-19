@@ -12,7 +12,7 @@ export function Footer() {
             SYNERGIA ALL STARS
           </span>
           <span className="text-slate-600">•</span>
-          <span>Escuela Exclusiva de Porrismo y Cheerleading</span>
+          <span>Escuela Exclusiva de Porrismo</span>
         </div>
 
         <div className="flex items-center gap-6">

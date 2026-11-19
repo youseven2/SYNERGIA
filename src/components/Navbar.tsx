@@ -18,7 +18,7 @@ export function Navbar() {
               SYNERGIA ALL STARS
             </span>
             <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
-              Porrismo · Cheerleading
+              Escuela de Porrismo
             </span>
           </div>
         </Link>

@@ -77,7 +77,7 @@ export default function HomePage() {
             <div className="mx-auto max-w-3xl text-center">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-300">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                Escuela Exclusiva de Porrismo & Cheerleading
+                Escuela Exclusiva de Porrismo
               </div>
 
               <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl leading-[1.08]">
