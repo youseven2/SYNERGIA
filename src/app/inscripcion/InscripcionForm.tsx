@@ -1,57 +1,70 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useState, FormEvent, useMemo } from "react";
 import Link from "next/link";
-
-const CHEER_CATEGORIES = [
-  { value: "mini", label: "Tiny & Mini All Stars (Nivel 1)" },
-  { value: "youth", label: "Youth Cheer (Nivel 1 – 2)" },
-  { value: "junior", label: "Junior All Stars (Nivel 2 – 3)" },
-  { value: "senior-all-girl", label: "Senior All Girl (Nivel 3 – 4)" },
-  { value: "coed", label: "Senior & Open Coed (Nivel 3 – 5)" },
-  { value: "tumbling", label: "Academia de Tumbling & Stunts" },
-];
-
-const CHEER_POSITIONS = [
-  "Flyer (Aérea)",
-  "Base",
-  "Backspot / Spotter",
-  "Frontspot",
-  "Tumbling / Gimnasia",
-  "Sin experiencia (evaluación inicial)",
-];
+import {
+  calculateAge,
+  loadSynergiaState,
+  saveSynergiaState,
+  RegistrationApplication,
+} from "@/lib/synergia-store";
 
 const RELATIONSHIPS = ["Madre", "Padre", "Tutor Legal", "Familiar Autorizado"];
 
-function calculateAge(birthDateStr: string): number | null {
-  if (!birthDateStr) return null;
-  const birth = new Date(`${birthDateStr}T00:00:00`);
-  if (Number.isNaN(birth.getTime())) return null;
-
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
-  if (
-    monthDiff < 0 ||
-    (monthDiff === 0 && today.getDate() < birth.getDate())
-  ) {
-    age--;
-  }
-  return age >= 0 ? age : null;
-}
+const MONTHS = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+];
 
 export function InscripcionForm() {
-  const searchParams = useSearchParams();
-  const initialCategory = searchParams.get("categoria") ?? "junior";
+  const currentYear = new Date().getFullYear();
+  const years = useMemo(
+    () => Array.from({ length: 45 }, (_, i) => currentYear - 3 - i),
+    [currentYear]
+  );
 
-  // Fecha de nacimiento primero para determinar flujo por edad
+  // Fecha de nacimiento con calendario + selector rápido año/mes/día
   const [birthDate, setBirthDate] = useState("");
+  const [quickYear, setQuickYear] = useState("");
+  const [quickMonth, setQuickMonth] = useState("");
+  const [quickDay, setQuickDay] = useState("");
+
+  function updateFromQuickCalendar(y: string, m: string, d: string) {
+    setQuickYear(y);
+    setQuickMonth(m);
+    setQuickDay(d);
+    if (y && m && d) {
+      const mm = m.padStart(2, "0");
+      const dd = d.padStart(2, "0");
+      setBirthDate(`${y}-${mm}-${dd}`);
+    }
+  }
+
+  function handleDateInputChange(val: string) {
+    setBirthDate(val);
+    if (val) {
+      const [y, m, d] = val.split("-");
+      setQuickYear(y ?? "");
+      setQuickMonth(m ? String(Number(m)) : "");
+      setQuickDay(d ? String(Number(d)) : "");
+    }
+  }
+
   const age = useMemo(() => calculateAge(birthDate), [birthDate]);
   const isMinor = age !== null && age < 18;
   const isUnderNine = age !== null && age < 9;
 
-  // Datos del representante (requerido si edad < 18)
+  // Datos del representante (si edad < 18)
   const [repName, setRepName] = useState("");
   const [repDocumentId, setRepDocumentId] = useState("");
   const [repRelationship, setRepRelationship] = useState(RELATIONSHIPS[0]);
@@ -63,12 +76,6 @@ export function InscripcionForm() {
   const [documentId, setDocumentId] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [category, setCategory] = useState(
-    CHEER_CATEGORIES.some((c) => c.value === initialCategory)
-      ? initialCategory
-      : "junior"
-  );
-  const [position, setPosition] = useState(CHEER_POSITIONS[0]);
   const [notes, setNotes] = useState("");
   const [submittedCode, setSubmittedCode] = useState<string | null>(null);
 
@@ -77,13 +84,45 @@ export function InscripcionForm() {
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const randomCode = `SAS-${Math.floor(100000 + Math.random() * 900000)}`;
-    setSubmittedCode(randomCode);
+    if (age === null) return;
+
+    const trackingCode = `SAS-${Math.floor(100000 + Math.random() * 900000)}`;
+    const newApp: RegistrationApplication = {
+      id: `app-${Date.now()}`,
+      trackingCode,
+      createdAt: new Date().toISOString(),
+      birthDate,
+      age,
+      isMinor,
+      isUnderNine,
+      repName: isMinor ? repName.trim() : undefined,
+      repDocumentId: isMinor ? repDocumentId.trim() : undefined,
+      repRelationship: isMinor ? repRelationship : undefined,
+      repPhone: isMinor ? repPhone.trim() : undefined,
+      repEmail: isMinor ? repEmail.trim() : undefined,
+      fullName: fullName.trim(),
+      documentId: effectiveAthleteDocumentId.trim(),
+      email: (isMinor ? repEmail : email).trim(),
+      phone: (isMinor ? repPhone : phone).trim(),
+      notes: notes.trim(),
+      status: "nuevo",
+    };
+
+    const state = loadSynergiaState();
+    saveSynergiaState({
+      ...state,
+      applications: [newApp, ...state.applications],
+    });
+
+    setSubmittedCode(trackingCode);
   }
 
   function resetForm() {
     setSubmittedCode(null);
     setBirthDate("");
+    setQuickYear("");
+    setQuickMonth("");
+    setQuickDay("");
     setRepName("");
     setRepDocumentId("");
     setRepPhone("");
@@ -96,9 +135,6 @@ export function InscripcionForm() {
   }
 
   if (submittedCode) {
-    const selectedCategoryLabel =
-      CHEER_CATEGORIES.find((c) => c.value === category)?.label ?? category;
-
     return (
       <div className="mx-auto max-w-xl rounded-3xl border border-emerald-500/30 bg-[#0D1424] p-8 text-center shadow-2xl">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
@@ -118,13 +154,14 @@ export function InscripcionForm() {
         </div>
 
         <h2 className="mt-5 text-2xl font-extrabold text-white">
-          ¡Pre-inscripción Registrada!
+          ¡Solicitud Enviada al Sistema!
         </h2>
-        <p className="mt-2 text-sm text-slate-300">
-          Hemos recibido la solicitud para{" "}
-          <strong className="text-emerald-300">SYNERGIA ALL STARS</strong> en la
-          categoría{" "}
-          <strong className="text-amber-300">{selectedCategoryLabel}</strong>.
+        <p className="mt-2 text-sm text-slate-300 leading-relaxed">
+          Tu registro como aspirante en{" "}
+          <strong className="text-emerald-300">SYNERGIA ALL STARS</strong> ha
+          generado un aviso para el entrenador. Pronto se te asignará una{" "}
+          <strong className="text-amber-300">cita de prueba</strong> para
+          evaluar tu nivel y determinar tu categoría y posición.
         </p>
 
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left text-sm space-y-2">
@@ -160,8 +197,10 @@ export function InscripcionForm() {
             </span>
           </div>
           <div className="flex justify-between gap-2">
-            <span className="text-slate-400">Posición:</span>
-            <span className="text-slate-200">{position}</span>
+            <span className="text-slate-400">Estado:</span>
+            <span className="text-emerald-300 font-semibold">
+              Esperando cita del entrenador
+            </span>
           </div>
         </div>
 
@@ -171,7 +210,7 @@ export function InscripcionForm() {
             onClick={resetForm}
             className="w-full sm:w-auto rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-slate-200 hover:bg-white/5 transition-colors cursor-pointer"
           >
-            Registrar otro atleta
+            Registrar otro aspirante
           </button>
           <Link
             href="/"
@@ -189,8 +228,8 @@ export function InscripcionForm() {
       onSubmit={handleSubmit}
       className="mx-auto max-w-2xl rounded-3xl border border-white/10 bg-[#0D1322] p-6 sm:p-10 shadow-2xl space-y-8"
     >
-      {/* Paso 1: Fecha de nacimiento para validar edad */}
-      <div className="rounded-2xl border border-white/10 bg-[#070B14]/70 p-5">
+      {/* Paso 1: Fecha de nacimiento con calendario y búsqueda rápida */}
+      <div className="rounded-2xl border border-white/10 bg-[#070B14]/70 p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <label
             htmlFor="birthDate"
@@ -210,7 +249,7 @@ export function InscripcionForm() {
             >
               Edad: {age} años ·{" "}
               {isUnderNine
-                ? "Menor de 9 años (inscribe representante, usa su cédula)"
+                ? "Menor de 9 años (usa cédula del representante)"
                 : isMinor
                 ? "Menor de 18 años (inscribe representante)"
                 : "Mayor de edad"}
@@ -218,21 +257,79 @@ export function InscripcionForm() {
           )}
         </div>
 
-        <input
-          id="birthDate"
-          type="date"
-          required
-          value={birthDate}
-          onChange={(e) => setBirthDate(e.target.value)}
-          className="mt-2.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
-        />
-        <p className="mt-2 text-xs text-slate-400">
-          Si el atleta es menor de 18 años, el representante debe completar sus
-          datos primero.
+        {/* Selector rápido de Año / Mes / Día */}
+        <div className="grid grid-cols-3 gap-2.5">
+          <select
+            aria-label="Año de nacimiento"
+            value={quickYear}
+            onChange={(e) =>
+              updateFromQuickCalendar(e.target.value, quickMonth, quickDay)
+            }
+            className="rounded-xl border border-white/15 bg-[#070B14] px-3 py-2.5 text-xs sm:text-sm text-white focus:border-emerald-400 focus:outline-none"
+          >
+            <option value="">Año</option>
+            {years.map((y) => (
+              <option key={y} value={String(y)}>
+                {y}
+              </option>
+            ))}
+          </select>
+
+          <select
+            aria-label="Mes de nacimiento"
+            value={quickMonth}
+            onChange={(e) =>
+              updateFromQuickCalendar(quickYear, e.target.value, quickDay)
+            }
+            className="rounded-xl border border-white/15 bg-[#070B14] px-3 py-2.5 text-xs sm:text-sm text-white focus:border-emerald-400 focus:outline-none"
+          >
+            <option value="">Mes</option>
+            {MONTHS.map((m, idx) => (
+              <option key={m} value={String(idx + 1)}>
+                {m}
+              </option>
+            ))}
+          </select>
+
+          <select
+            aria-label="Día de nacimiento"
+            value={quickDay}
+            onChange={(e) =>
+              updateFromQuickCalendar(quickYear, quickMonth, e.target.value)
+            }
+            className="rounded-xl border border-white/15 bg-[#070B14] px-3 py-2.5 text-xs sm:text-sm text-white focus:border-emerald-400 focus:outline-none"
+          >
+            <option value="">Día</option>
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+              <option key={d} value={String(d)}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Calendario nativo */}
+        <div>
+          <span className="block text-[11px] font-medium text-slate-400 mb-1">
+            O selecciona directamente en el calendario:
+          </span>
+          <input
+            id="birthDate"
+            type="date"
+            required
+            value={birthDate}
+            onChange={(e) => handleDateInputChange(e.target.value)}
+            className="w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none [color-scheme:dark]"
+          />
+        </div>
+
+        <p className="text-xs text-slate-400">
+          La categoría y posición serán asignadas por el entrenador luego de
+          realizar la prueba de evaluación.
         </p>
       </div>
 
-      {/* Sección del Representante (solo si edad < 18, aparece PRIMERO) */}
+      {/* Sección del Representante (si edad < 18, aparece PRIMERO) */}
       {isMinor && (
         <div className="space-y-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] p-5 sm:p-6">
           <div className="border-b border-emerald-500/20 pb-3">
@@ -346,7 +443,7 @@ export function InscripcionForm() {
         {isMinor && (
           <div className="border-b border-white/10 pb-3">
             <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
-              Paso 2 · Datos deportivos y personales
+              Paso 2 · Datos del aspirante
             </span>
             <h2 className="mt-1 text-lg font-bold text-white">
               Datos del Atleta
@@ -452,61 +549,19 @@ export function InscripcionForm() {
             </>
           )}
 
-          <div>
-            <label
-              htmlFor="category"
-              className="block text-sm font-semibold text-slate-200"
-            >
-              Equipo / Categoría de Porrismo *
-            </label>
-            <select
-              id="category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
-            >
-              {CHEER_CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="position"
-              className="block text-sm font-semibold text-slate-200"
-            >
-              Posición en Porrismo *
-            </label>
-            <select
-              id="position"
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
-            >
-              {CHEER_POSITIONS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div className="sm:col-span-2">
             <label
               htmlFor="notes"
               className="block text-sm font-semibold text-slate-200"
             >
-              Experiencia en porrismo, gimnasia o danza (opcional)
+              Experiencia previa en porrismo, gimnasia o danza (opcional)
             </label>
             <textarea
               id="notes"
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Cuéntanos tu nivel de tumbling, experiencia en stunts o si es tu primera vez..."
+              placeholder="Cuéntanos si has practicado porrismo, gimnasia o si es tu primera vez..."
               className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
             />
           </div>
@@ -524,7 +579,7 @@ export function InscripcionForm() {
           type="submit"
           className="w-full sm:w-auto rounded-xl bg-amber-400 px-7 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-amber-400/20 hover:bg-amber-300 transition-all cursor-pointer"
         >
-          Enviar Inscripción
+          Enviar Solicitud
         </button>
       </div>
     </form>
