@@ -12,14 +12,14 @@ export default function InscripcionPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center mb-10">
             <span className="inline-block rounded-full border border-amber-400/30 bg-amber-400/10 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-300">
-              Registro de Atletas
+              SYNERGIA ALL STARS · Porrismo
             </span>
             <h1 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">
-              Inscripción a Equipos
+              Inscripción a Equipos de Cheerleading
             </h1>
             <p className="mt-3 text-slate-300">
-              Completa tus datos para postularte a nuestras selecciones y
-              categorías deportivas.
+              Completa tus datos para postularte a nuestros equipos oficiales de
+              porrismo.
             </p>
           </div>
 

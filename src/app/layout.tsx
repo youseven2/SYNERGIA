@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SYNERGIA Deportes | Portal Deportivo e Inscripciones",
+  title: "SYNERGIA ALL STARS | Escuela de Porrismo y Cheerleading",
   description:
-    "Plataforma deportiva SYNERGIA: gestión de equipos, inscripción de atletas y acceso al sistema administrativo.",
+    "SYNERGIA ALL STARS: escuela exclusiva de atletas de porrismo y cheerleading. Inscripción a equipos y acceso al sistema administrativo.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

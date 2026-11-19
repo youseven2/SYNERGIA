@@ -14,7 +14,7 @@ export default function SistemaPage() {
   function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatusMessage(
-      `Acceso preparado para ${email} (${role}). En los siguientes pasos conectaremos la autenticación y el panel del sistema.`
+      `Acceso preparado para ${email} (${role}) en SYNERGIA ALL STARS. En los siguientes pasos conectaremos la autenticación y el panel del sistema.`
     );
   }
 
@@ -26,13 +26,13 @@ export default function SistemaPage() {
         <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0D1322] p-8 shadow-2xl">
           <div className="text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 font-black text-xl">
-              S
+              ★
             </div>
             <h1 className="mt-4 text-2xl font-extrabold text-white">
-              Ingresar al Sistema
+              SYNERGIA ALL STARS
             </h1>
             <p className="mt-1.5 text-sm text-slate-400">
-              Plataforma de gestión interna SYNERGIA Deportes
+              Sistema de Gestión · Escuela de Porrismo
             </p>
           </div>
 
@@ -51,7 +51,7 @@ export default function SistemaPage() {
                 className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
               >
                 <option value="administrador">Administrador</option>
-                <option value="entrenador">Entrenador / Cuerpo Técnico</option>
+                <option value="coach">Coach / Entrenador de Cheer</option>
                 <option value="coordinador">Coordinador de Equipos</option>
               </select>
             </div>
@@ -69,7 +69,7 @@ export default function SistemaPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="usuario@synergia.com"
+                placeholder="coach@synergiaallstars.com"
                 className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
               />
             </div>
@@ -102,7 +102,7 @@ export default function SistemaPage() {
               type="submit"
               className="w-full rounded-xl bg-emerald-500 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 transition-all cursor-pointer"
             >
-              Iniciar Sesión
+              Ingresar al Sistema
             </button>
           </form>
 

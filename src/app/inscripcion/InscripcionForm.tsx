@@ -4,43 +4,51 @@ import { useSearchParams } from "next/navigation";
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 
-const DISCIPLINES = [
-  { value: "futbol", label: "Fútbol" },
-  { value: "baloncesto", label: "Baloncesto" },
-  { value: "voleibol", label: "Voleibol" },
-  { value: "atletismo", label: "Atletismo" },
-  { value: "natacion", label: "Natación" },
-  { value: "funcional", label: "Entrenamiento Funcional" },
+const CHEER_CATEGORIES = [
+  { value: "mini", label: "Tiny & Mini All Stars (Nivel 1)" },
+  { value: "youth", label: "Youth Cheer (Nivel 1 – 2)" },
+  { value: "junior", label: "Junior All Stars (Nivel 2 – 3)" },
+  { value: "senior-all-girl", label: "Senior All Girl (Nivel 3 – 4)" },
+  { value: "coed", label: "Senior & Open Coed (Nivel 3 – 5)" },
+  { value: "tumbling", label: "Academia de Tumbling & Stunts" },
 ];
 
-const CATEGORIES = ["Sub-15", "Sub-18", "Sub-21", "Libre / Mayor"];
+const CHEER_POSITIONS = [
+  "Flyer (Aérea)",
+  "Base",
+  "Backspot / Spotter",
+  "Frontspot",
+  "Tumbling / Gimnasia",
+  "Sin experiencia (evaluación inicial)",
+];
 
 export function InscripcionForm() {
   const searchParams = useSearchParams();
-  const initialSport = searchParams.get("disciplina") ?? "futbol";
+  const initialCategory = searchParams.get("categoria") ?? "junior";
 
   const [fullName, setFullName] = useState("");
   const [documentId, setDocumentId] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [discipline, setDiscipline] = useState(
-    DISCIPLINES.some((d) => d.value === initialSport) ? initialSport : "futbol"
+  const [category, setCategory] = useState(
+    CHEER_CATEGORIES.some((c) => c.value === initialCategory)
+      ? initialCategory
+      : "junior"
   );
-  const [category, setCategory] = useState("Sub-18");
-  const [position, setPosition] = useState("");
+  const [position, setPosition] = useState(CHEER_POSITIONS[0]);
   const [notes, setNotes] = useState("");
   const [submittedCode, setSubmittedCode] = useState<string | null>(null);
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const randomCode = `SYN-${Math.floor(100000 + Math.random() * 900000)}`;
+    const randomCode = `SAS-${Math.floor(100000 + Math.random() * 900000)}`;
     setSubmittedCode(randomCode);
   }
 
   if (submittedCode) {
-    const selectedDiscipline =
-      DISCIPLINES.find((d) => d.value === discipline)?.label ?? discipline;
+    const selectedCategoryLabel =
+      CHEER_CATEGORIES.find((c) => c.value === category)?.label ?? category;
 
     return (
       <div className="mx-auto max-w-xl rounded-3xl border border-emerald-500/30 bg-[#0D1424] p-8 text-center shadow-2xl">
@@ -61,12 +69,13 @@ export function InscripcionForm() {
         </div>
 
         <h2 className="mt-5 text-2xl font-extrabold text-white">
-          ¡Solicitud Registrada!
+          ¡Pre-inscripción Registrada!
         </h2>
         <p className="mt-2 text-sm text-slate-300">
-          Hemos recibido tu pre-inscripción para el equipo de{" "}
-          <strong className="text-emerald-300">{selectedDiscipline}</strong> (
-          {category}).
+          Hemos recibido tu solicitud para{" "}
+          <strong className="text-emerald-300">SYNERGIA ALL STARS</strong> en la
+          categoría{" "}
+          <strong className="text-amber-300">{selectedCategoryLabel}</strong>.
         </p>
 
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left text-sm space-y-2">
@@ -79,6 +88,10 @@ export function InscripcionForm() {
           <div className="flex justify-between">
             <span className="text-slate-400">Atleta:</span>
             <span className="font-semibold text-white">{fullName}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400">Posición:</span>
+            <span className="text-slate-200">{position}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-400">Correo:</span>
@@ -96,7 +109,6 @@ export function InscripcionForm() {
               setEmail("");
               setPhone("");
               setBirthDate("");
-              setPosition("");
               setNotes("");
             }}
             className="w-full sm:w-auto rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-slate-200 hover:bg-white/5 transition-colors"
@@ -133,7 +145,7 @@ export function InscripcionForm() {
             required
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            placeholder="Ej. Carlos Andrés Mendoza"
+            placeholder="Ej. Valeria Sofía Mendoza"
             className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
           />
         </div>
@@ -211,31 +223,10 @@ export function InscripcionForm() {
 
         <div>
           <label
-            htmlFor="discipline"
-            className="block text-sm font-semibold text-slate-200"
-          >
-            Disciplina deportiva *
-          </label>
-          <select
-            id="discipline"
-            value={discipline}
-            onChange={(e) => setDiscipline(e.target.value)}
-            className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
-          >
-            {DISCIPLINES.map((d) => (
-              <option key={d.value} value={d.value}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label
             htmlFor="category"
             className="block text-sm font-semibold text-slate-200"
           >
-            Categoría *
+            Equipo / Categoría de Porrismo *
           </label>
           <select
             id="category"
@@ -243,9 +234,30 @@ export function InscripcionForm() {
             onChange={(e) => setCategory(e.target.value)}
             className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
           >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            {CHEER_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="position"
+            className="block text-sm font-semibold text-slate-200"
+          >
+            Posición en Cheerleading *
+          </label>
+          <select
+            id="position"
+            value={position}
+            onChange={(e) => setPosition(e.target.value)}
+            className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
+          >
+            {CHEER_POSITIONS.map((p) => (
+              <option key={p} value={p}>
+                {p}
               </option>
             ))}
           </select>
@@ -253,34 +265,17 @@ export function InscripcionForm() {
 
         <div className="sm:col-span-2">
           <label
-            htmlFor="position"
-            className="block text-sm font-semibold text-slate-200"
-          >
-            Posición o especialidad (opcional)
-          </label>
-          <input
-            id="position"
-            type="text"
-            value={position}
-            onChange={(e) => setPosition(e.target.value)}
-            placeholder="Ej. Mediocampista, Base, 100m planos..."
-            className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
-          />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label
             htmlFor="notes"
             className="block text-sm font-semibold text-slate-200"
           >
-            Experiencia previa o comentarios
+            Experiencia en porrismo, gimnasia o danza (opcional)
           </label>
           <textarea
             id="notes"
             rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Cuéntanos sobre tus clubes anteriores, logros o disponibilidad..."
+            placeholder="Cuéntanos tu nivel de tumbling, experiencia en stunts o si es tu primera vez..."
             className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
           />
         </div>

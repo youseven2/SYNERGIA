@@ -8,3 +8,23 @@
 html {
   scroll-behavior: smooth;
 }
+
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll var(--marquee-duration, 32s) linear infinite;
+}
+
+.animate-marquee.paused,
+.marquee-wrapper:hover .animate-marquee {
+  animation-play-state: paused;
+}

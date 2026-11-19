@@ -6,19 +6,19 @@ export function Footer() {
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
         <div className="flex items-center gap-2.5">
           <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-xs font-black text-emerald-400">
-            S
+            ★
           </span>
           <span className="font-semibold text-slate-200">
-            SYNERGIA Deportes
+            SYNERGIA ALL STARS
           </span>
           <span className="text-slate-600">•</span>
-          <span>Gestión deportiva y registro de atletas</span>
+          <span>Escuela Exclusiva de Porrismo y Cheerleading</span>
         </div>
 
         <div className="flex items-center gap-6">
           <Link
             href="/inscripcion"
-            className="hover:text-emerald-400 transition-colors"
+            className="hover:text-amber-300 transition-colors"
           >
             Inscripción de Atletas
           </Link>
@@ -26,7 +26,7 @@ export function Footer() {
             href="/sistema"
             className="hover:text-emerald-400 transition-colors"
           >
-            Acceso al Sistema
+            Ingresar al Sistema
           </Link>
         </div>
       </div>

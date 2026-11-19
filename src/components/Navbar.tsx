@@ -10,15 +10,15 @@ export function Navbar() {
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070B14]/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 text-slate-950 font-black text-lg shadow-lg shadow-emerald-500/20 transition-transform group-hover:scale-105">
-            S
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 via-teal-500 to-amber-400 text-slate-950 font-black text-lg shadow-lg shadow-emerald-500/20 transition-transform group-hover:scale-105">
+            ★
           </div>
           <div>
-            <span className="block text-lg font-extrabold tracking-tight text-white">
-              SYNERGIA
+            <span className="block text-base sm:text-lg font-extrabold tracking-tight text-white">
+              SYNERGIA ALL STARS
             </span>
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
-              Portal Deportivo
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
+              Porrismo · Cheerleading
             </span>
           </div>
         </Link>
@@ -27,11 +27,11 @@ export function Navbar() {
           <Link href="/#inicio" className="hover:text-white transition-colors">
             Inicio
           </Link>
-          <Link
-            href="/#disciplinas"
-            className="hover:text-white transition-colors"
-          >
-            Disciplinas
+          <Link href="/#galeria" className="hover:text-white transition-colors">
+            Galería
+          </Link>
+          <Link href="/#equipos" className="hover:text-white transition-colors">
+            Equipos Cheer
           </Link>
           <Link
             href="/#acceso-rapido"
@@ -44,7 +44,7 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/inscripcion"
-            className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400 transition-all"
+            className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-300 hover:bg-amber-400/20 hover:border-amber-300 transition-all"
           >
             Inscribirse a Equipos
           </Link>
@@ -96,11 +96,18 @@ export function Navbar() {
             Inicio
           </Link>
           <Link
-            href="/#disciplinas"
+            href="/#galeria"
             onClick={() => setMenuOpen(false)}
             className="block py-2 text-sm font-medium text-slate-300 hover:text-white"
           >
-            Disciplinas
+            Galería
+          </Link>
+          <Link
+            href="/#equipos"
+            onClick={() => setMenuOpen(false)}
+            className="block py-2 text-sm font-medium text-slate-300 hover:text-white"
+          >
+            Equipos Cheer
           </Link>
           <Link
             href="/#acceso-rapido"
@@ -113,7 +120,7 @@ export function Navbar() {
             <Link
               href="/inscripcion"
               onClick={() => setMenuOpen(false)}
-              className="w-full text-center rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-300"
+              className="w-full text-center rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-2.5 text-sm font-semibold text-amber-300"
             >
               Inscribirse a Equipos
             </Link>
