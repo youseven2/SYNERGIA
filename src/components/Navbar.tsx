@@ -44,9 +44,9 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/inscripcion"
-            className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-300 hover:bg-amber-400/20 hover:border-amber-300 transition-all"
+            className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-sm font-bold text-amber-300 hover:bg-amber-400/20 hover:border-amber-300 transition-all"
           >
-            Inscribirse a Equipos
+            INSCRIBETE
           </Link>
           <Link
             href="/sistema"
@@ -120,9 +120,9 @@ export function Navbar() {
             <Link
               href="/inscripcion"
               onClick={() => setMenuOpen(false)}
-              className="w-full text-center rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-2.5 text-sm font-semibold text-amber-300"
+              className="w-full text-center rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-2.5 text-sm font-bold text-amber-300"
             >
-              Inscribirse a Equipos
+              INSCRIBETE
             </Link>
             <Link
               href="/sistema"
