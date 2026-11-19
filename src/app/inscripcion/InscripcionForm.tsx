@@ -11,54 +11,8 @@ import {
 
 const RELATIONSHIPS = ["Madre", "Padre", "Tutor Legal", "Familiar Autorizado"];
 
-const MONTHS = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
-];
-
 export function InscripcionForm() {
-  const currentYear = new Date().getFullYear();
-  const years = useMemo(
-    () => Array.from({ length: 45 }, (_, i) => currentYear - 3 - i),
-    [currentYear]
-  );
-
-  // Fecha de nacimiento con calendario + selector rápido año/mes/día
   const [birthDate, setBirthDate] = useState("");
-  const [quickYear, setQuickYear] = useState("");
-  const [quickMonth, setQuickMonth] = useState("");
-  const [quickDay, setQuickDay] = useState("");
-
-  function updateFromQuickCalendar(y: string, m: string, d: string) {
-    setQuickYear(y);
-    setQuickMonth(m);
-    setQuickDay(d);
-    if (y && m && d) {
-      const mm = m.padStart(2, "0");
-      const dd = d.padStart(2, "0");
-      setBirthDate(`${y}-${mm}-${dd}`);
-    }
-  }
-
-  function handleDateInputChange(val: string) {
-    setBirthDate(val);
-    if (val) {
-      const [y, m, d] = val.split("-");
-      setQuickYear(y ?? "");
-      setQuickMonth(m ? String(Number(m)) : "");
-      setQuickDay(d ? String(Number(d)) : "");
-    }
-  }
 
   const age = useMemo(() => calculateAge(birthDate), [birthDate]);
   const isMinor = age !== null && age < 18;
@@ -120,9 +74,6 @@ export function InscripcionForm() {
   function resetForm() {
     setSubmittedCode(null);
     setBirthDate("");
-    setQuickYear("");
-    setQuickMonth("");
-    setQuickDay("");
     setRepName("");
     setRepDocumentId("");
     setRepPhone("");
@@ -257,71 +208,15 @@ export function InscripcionForm() {
           )}
         </div>
 
-        {/* Selector rápido de Año / Mes / Día */}
-        <div className="grid grid-cols-3 gap-2.5">
-          <select
-            aria-label="Año de nacimiento"
-            value={quickYear}
-            onChange={(e) =>
-              updateFromQuickCalendar(e.target.value, quickMonth, quickDay)
-            }
-            className="rounded-xl border border-white/15 bg-[#070B14] px-3 py-2.5 text-xs sm:text-sm text-white focus:border-emerald-400 focus:outline-none"
-          >
-            <option value="">Año</option>
-            {years.map((y) => (
-              <option key={y} value={String(y)}>
-                {y}
-              </option>
-            ))}
-          </select>
-
-          <select
-            aria-label="Mes de nacimiento"
-            value={quickMonth}
-            onChange={(e) =>
-              updateFromQuickCalendar(quickYear, e.target.value, quickDay)
-            }
-            className="rounded-xl border border-white/15 bg-[#070B14] px-3 py-2.5 text-xs sm:text-sm text-white focus:border-emerald-400 focus:outline-none"
-          >
-            <option value="">Mes</option>
-            {MONTHS.map((m, idx) => (
-              <option key={m} value={String(idx + 1)}>
-                {m}
-              </option>
-            ))}
-          </select>
-
-          <select
-            aria-label="Día de nacimiento"
-            value={quickDay}
-            onChange={(e) =>
-              updateFromQuickCalendar(quickYear, quickMonth, e.target.value)
-            }
-            className="rounded-xl border border-white/15 bg-[#070B14] px-3 py-2.5 text-xs sm:text-sm text-white focus:border-emerald-400 focus:outline-none"
-          >
-            <option value="">Día</option>
-            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-              <option key={d} value={String(d)}>
-                {d}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Calendario nativo */}
-        <div>
-          <span className="block text-[11px] font-medium text-slate-400 mb-1">
-            O selecciona directamente en el calendario:
-          </span>
-          <input
-            id="birthDate"
-            type="date"
-            required
-            value={birthDate}
-            onChange={(e) => handleDateInputChange(e.target.value)}
-            className="w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none [color-scheme:dark]"
-          />
-        </div>
+        {/* Calendario */}
+        <input
+          id="birthDate"
+          type="date"
+          required
+          value={birthDate}
+          onChange={(e) => setBirthDate(e.target.value)}
+          className="w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none [color-scheme:dark]"
+        />
 
         <p className="text-xs text-slate-400">
           La categoría y posición serán asignadas por el entrenador luego de
