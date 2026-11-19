@@ -1,6 +1,8 @@
 "use client";
 
 import { AthleteProfile } from "@/lib/synergia-store";
+import { useI18n } from "@/components/I18nContext";
+import { useDevice } from "@/components/DeviceContext";
 
 function BarcodeSvg({ value }: { value: string }) {
   // Deterministic Code128-style visual barcode bars from string characters
@@ -52,24 +54,30 @@ function BarcodeSvg({ value }: { value: string }) {
 }
 
 export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
+  const { t } = useI18n();
+  const { isMobile } = useDevice();
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-base font-bold text-white">
-          Carnet Oficial de Atleta (Anverso y Reverso)
+          {t(
+            "Carnet Oficial de Atleta (Anverso y Reverso)",
+            "Official Athlete ID Card (Front & Back)"
+          )}
         </h3>
         <button
           type="button"
           onClick={() => window.print()}
-          className="rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-4 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500/25 transition-colors cursor-pointer print:hidden"
+          className="w-full sm:w-auto rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-4 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500/25 transition-colors cursor-pointer print:hidden"
         >
-          Imprimir / Descargar Carnet
+          {t("Imprimir / Descargar Carnet", "Print / Download ID Card")}
         </button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className={`grid gap-5 sm:gap-6 ${isMobile ? "grid-cols-1" : "md:grid-cols-2"}`}>
         {/* ANVERSO (FRENTE) */}
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-400/40 bg-gradient-to-br from-[#0B1528] via-[#09101E] to-[#060A13] p-5 shadow-2xl">
+        <div className="responsive-report-card relative overflow-hidden rounded-2xl border border-emerald-400/40 bg-gradient-to-br from-[#0B1528] via-[#09101E] to-[#060A13] p-4 sm:p-5 shadow-2xl">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-amber-400 text-slate-950 font-black text-sm">

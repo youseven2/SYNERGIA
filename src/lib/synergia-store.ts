@@ -97,10 +97,18 @@ export interface AthleteProfile {
   formalizedAt: string;
 }
 
+export interface SystemUser {
+  username: string;
+  password: string;
+  role: string;
+  fullName: string;
+}
+
 export interface SynergiaState {
   applications: RegistrationApplication[];
   forms: EvaluationFormTemplate[];
   athletes: AthleteProfile[];
+  systemUsers: SystemUser[];
 }
 
 export const CHEER_CATEGORIES = [
@@ -121,6 +129,15 @@ export const CHEER_POSITIONS = [
 ];
 
 const STORAGE_KEY = "synergia_all_stars_state_v1";
+
+export const DEFAULT_SYSTEM_USERS: SystemUser[] = [
+  {
+    username: "admin",
+    password: "Qwerty123.",
+    role: "Administrador",
+    fullName: "Administrador SYNERGIA",
+  },
+];
 
 const DEFAULT_FORMS: EvaluationFormTemplate[] = [
   {
@@ -206,9 +223,43 @@ export function generateAthleteId(
   };
 }
 
+function mergeSystemUsers(existing?: SystemUser[]): SystemUser[] {
+  const list = Array.isArray(existing) ? [...existing] : [];
+  for (const def of DEFAULT_SYSTEM_USERS) {
+    const idx = list.findIndex(
+      (u) => u.username.toLowerCase() === def.username.toLowerCase()
+    );
+    if (idx === -1) {
+      list.push(def);
+    } else if (def.username === "admin") {
+      list[idx] = { ...list[idx], password: def.password };
+    }
+  }
+  return list;
+}
+
+export function authenticateSystemUser(
+  state: SynergiaState,
+  username: string,
+  password: string
+): SystemUser | null {
+  const cleanUser = username.trim().toLowerCase();
+  const users = mergeSystemUsers(state.systemUsers);
+  return (
+    users.find(
+      (u) => u.username.toLowerCase() === cleanUser && u.password === password
+    ) ?? null
+  );
+}
+
 export function loadSynergiaState(): SynergiaState {
   if (typeof window === "undefined") {
-    return { applications: [], forms: DEFAULT_FORMS, athletes: [] };
+    return {
+      applications: [],
+      forms: DEFAULT_FORMS,
+      athletes: [],
+      systemUsers: DEFAULT_SYSTEM_USERS,
+    };
   }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -217,21 +268,30 @@ export function loadSynergiaState(): SynergiaState {
         applications: [],
         forms: DEFAULT_FORMS,
         athletes: [],
+        systemUsers: DEFAULT_SYSTEM_USERS,
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
       return initial;
     }
     const parsed = JSON.parse(raw) as Partial<SynergiaState>;
-    return {
+    const merged: SynergiaState = {
       applications: Array.isArray(parsed.applications) ? parsed.applications : [],
       forms:
         Array.isArray(parsed.forms) && parsed.forms.length > 0
           ? parsed.forms
           : DEFAULT_FORMS,
       athletes: Array.isArray(parsed.athletes) ? parsed.athletes : [],
+      systemUsers: mergeSystemUsers(parsed.systemUsers),
     };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    return merged;
   } catch {
-    return { applications: [], forms: DEFAULT_FORMS, athletes: [] };
+    return {
+      applications: [],
+      forms: DEFAULT_FORMS,
+      athletes: [],
+      systemUsers: DEFAULT_SYSTEM_USERS,
+    };
   }
 }
 

@@ -10,12 +10,15 @@ import {
   EvaluationFormTemplate,
   RegistrationApplication,
   SynergiaState,
+  SystemUser,
   generateAthleteId,
   generateAthleteUsername,
   saveSynergiaState,
 } from "@/lib/synergia-store";
 import { generateEvaluationPdf } from "@/lib/pdf-report";
 import { AthleteCarnet } from "@/components/AthleteCarnet";
+import { useDevice } from "@/components/DeviceContext";
+import { useI18n } from "@/components/I18nContext";
 
 type CoachTab = "inscripcion" | "formularios" | "evaluacion" | "perfil";
 
@@ -23,13 +26,17 @@ interface CoachDashboardProps {
   state: SynergiaState;
   onStateChange: (next: SynergiaState) => void;
   onLogout: () => void;
+  currentUser?: SystemUser;
 }
 
 export function CoachDashboard({
   state,
   onStateChange,
   onLogout,
+  currentUser,
 }: CoachDashboardProps) {
+  const { deviceType, isMobile, isTablet } = useDevice();
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<CoachTab>("inscripcion");
 
   // Cita & Formalización modals/inline state
@@ -341,20 +348,44 @@ export function CoachDashboard({
     state.athletes[0] ??
     null;
 
+  const deviceLabel =
+    deviceType === "mobile"
+      ? t("Celular", "Mobile")
+      : deviceType === "tablet"
+      ? t("Tablet", "Tablet")
+      : t("Computadora", "Desktop");
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+    <div
+      className={`mx-auto max-w-7xl space-y-6 ${
+        isMobile ? "px-3 py-5" : isTablet ? "px-5 py-6" : "px-6 lg:px-8 py-8"
+      }`}
+    >
       {/* Top Bar */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#0D1322] p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#0D1322] p-4 sm:p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-400">
-            Panel de Entrenador · SYNERGIA ALL STARS
-          </span>
-          <h1 className="mt-1 text-2xl font-extrabold text-white">
-            Sistema de Gestión Deportiva
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-400">
+              {t(
+                "Panel de Entrenador · SYNERGIA ALL STARS",
+                "Coach Panel · SYNERGIA ALL STARS"
+              )}
+            </span>
+            {currentUser && (
+              <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-500/25">
+                {currentUser.username} ({currentUser.role})
+              </span>
+            )}
+            <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-slate-300 border border-white/10">
+              {t("Pantalla:", "Screen:")} {deviceLabel}
+            </span>
+          </div>
+          <h1 className="mt-1 text-xl sm:text-2xl font-extrabold text-white">
+            {t("Sistema de Gestión Deportiva", "Sports Management System")}
           </h1>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           {newApplicantsCount > 0 && (
             <button
               type="button"
@@ -362,7 +393,10 @@ export function CoachDashboard({
               className="inline-flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-400/15 px-3.5 py-2 text-xs font-bold text-amber-200 animate-pulse cursor-pointer"
             >
               <span className="h-2 w-2 rounded-full bg-amber-400" />
-              Aviso: {newApplicantsCount} aspirante(s) nuevo(s)
+              {t(
+                `Aviso: ${newApplicantsCount} aspirante(s) nuevo(s)`,
+                `Notice: ${newApplicantsCount} new applicant(s)`
+              )}
             </button>
           )}
           <button
@@ -370,33 +404,39 @@ export function CoachDashboard({
             onClick={onLogout}
             className="rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
           >
-            Cerrar Sesión
+            {t("Cerrar Sesión", "Sign Out")}
           </button>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-white/10 pb-3">
+      <div
+        className={`gap-2 border-b border-white/10 pb-3 ${
+          isMobile
+            ? "grid grid-cols-2"
+            : "flex flex-wrap"
+        }`}
+      >
         {(
           [
             {
               key: "inscripcion",
-              label: "INSCRIPCION",
+              label: t("INSCRIPCION", "REGISTRATION"),
               badge: newApplicantsCount,
             },
             {
               key: "formularios",
-              label: "Formularios",
+              label: t("Formularios", "Forms"),
               badge: state.forms.length,
             },
             {
               key: "evaluacion",
-              label: "Evaluación y PDF",
+              label: t("Evaluación y PDF", "Evaluation & PDF"),
               badge: 0,
             },
             {
               key: "perfil",
-              label: "Perfil del Atleta",
+              label: t("Perfil del Atleta", "Athlete Profile"),
               badge: state.athletes.length,
             },
           ] as const
@@ -405,7 +445,7 @@ export function CoachDashboard({
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all cursor-pointer ${
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               activeTab === tab.key
                 ? "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20"
                 : "bg-[#0D1322] text-slate-300 border border-white/10 hover:text-white"

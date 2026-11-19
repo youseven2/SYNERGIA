@@ -7,6 +7,28 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Device-aware responsive adjustments for screens and reports */
+html[data-device="mobile"] .responsive-report-card {
+  padding: 1rem;
+}
+
+html[data-device="tablet"] .responsive-report-card {
+  padding: 1.25rem;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
 }
 
 @keyframes marquee-scroll {
