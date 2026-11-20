@@ -201,13 +201,13 @@ export function Navbar() {
             <div className="hidden md:flex items-center gap-2.5">
               <Link
                 href="/inscripcion"
-                className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3.5 py-2 text-xs lg:text-sm font-bold text-amber-300 hover:bg-amber-400/20 hover:border-amber-300 transition-all"
+                className="rounded-lg border border-[#9D5BB8]/60 bg-[#7E3D97]/25 px-3.5 py-2 text-xs lg:text-sm font-bold text-purple-200 hover:bg-[#7E3D97]/45 hover:border-[#B575CF] transition-all"
               >
                 {t("INSCRIBETE", "REGISTER")}
               </Link>
               <Link
                 href="/sistema"
-                className="rounded-lg bg-emerald-500 px-3.5 py-2 text-xs lg:text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/25 hover:bg-emerald-400 transition-all"
+                className="rounded-lg bg-[#00B7A4] px-3.5 py-2 text-xs lg:text-sm font-bold text-slate-950 shadow-lg shadow-[#00B7A4]/25 hover:bg-[#14CEBA] transition-all"
               >
                 {t("Ingresar al Sistema", "System Login")}
               </Link>

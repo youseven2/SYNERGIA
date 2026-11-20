@@ -102,14 +102,15 @@ export default function HomePage() {
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 -z-10"
           >
-            <div className="absolute -top-36 left-1/2 h-[480px] w-[820px] -translate-x-1/2 rounded-full bg-emerald-500/15 blur-[130px]" />
-            <div className="absolute bottom-0 right-0 h-[320px] w-[420px] rounded-full bg-amber-500/10 blur-[120px]" />
+            <div className="absolute -top-36 left-1/2 h-[480px] w-[820px] -translate-x-1/2 rounded-full bg-[#00B7A4]/15 blur-[130px]" />
+            <div className="absolute top-12 left-1/4 h-[320px] w-[420px] rounded-full bg-[#7E3D97]/25 blur-[130px]" />
+            <div className="absolute bottom-0 right-0 h-[320px] w-[420px] rounded-full bg-[#7E3D97]/20 blur-[120px]" />
           </div>
 
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-3xl text-center">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-300">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#9D5BB8]/45 bg-[#7E3D97]/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-purple-200">
+                <span className="h-2 w-2 rounded-full bg-[#00B7A4] animate-pulse" />
                 {t(
                   "Escuela Exclusiva de Porrismo",
                   "Exclusive Cheerleading Academy"
@@ -122,7 +123,7 @@ export default function HomePage() {
                 <img
                   src="/synergia-logo.svg"
                   alt="SYNERGIA ALL STARS"
-                  className="w-full max-w-[330px] sm:max-w-[540px] md:max-w-[660px] lg:max-w-[760px] h-auto object-contain drop-shadow-[0_14px_36px_rgba(0,183,164,0.28)]"
+                  className="w-full max-w-[330px] sm:max-w-[540px] md:max-w-[660px] lg:max-w-[760px] h-auto object-contain drop-shadow-[0_14px_36px_rgba(126,61,151,0.32)]"
                 />
               </div>
 
@@ -132,6 +133,49 @@ export default function HomePage() {
                   "We train cheerleading athletes with discipline, technique and competitive spirit. Access the internal system or register to join our All Star teams."
                 )}
               </p>
+
+              {/* Botones principales junto al logo central */}
+              <div className="mt-8 sm:mt-10 flex flex-col items-center justify-center gap-3.5 sm:flex-row sm:gap-4">
+                <Link
+                  href="/inscripcion"
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2.5 rounded-xl border border-[#9D5BB8]/60 bg-[#7E3D97] px-7 py-3.5 sm:py-4 text-sm sm:text-base font-bold text-white shadow-xl shadow-[#7E3D97]/30 hover:bg-[#914BAE] hover:-translate-y-0.5 transition-all"
+                >
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z"
+                    />
+                  </svg>
+                  {t("INSCRIBETE", "REGISTER NOW")}
+                </Link>
+
+                <Link
+                  href="/sistema"
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2.5 rounded-xl bg-[#00B7A4] px-7 py-3.5 sm:py-4 text-sm sm:text-base font-bold text-slate-950 shadow-xl shadow-[#00B7A4]/25 hover:bg-[#14CEBA] hover:-translate-y-0.5 transition-all"
+                >
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"
+                    />
+                  </svg>
+                  {t("Ingresar al Sistema", "System Login")}
+                </Link>
+              </div>
             </div>
 
             {/* Quick Stats Bar */}
@@ -153,10 +197,14 @@ export default function HomePage() {
                   label: t("Sistema Interno", "Internal System"),
                   value: "24/7 Online",
                 },
-              ].map((stat) => (
+              ].map((stat, idx) => (
                 <div
                   key={stat.label}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 sm:p-4 text-center backdrop-blur-sm"
+                  className={`rounded-2xl border bg-white/[0.03] p-3.5 sm:p-4 text-center backdrop-blur-sm ${
+                    idx % 2 === 0
+                      ? "border-[#00B7A4]/25"
+                      : "border-[#7E3D97]/35"
+                  }`}
                 >
                   <div className="text-base font-extrabold text-white sm:text-xl">
                     {stat.value}
@@ -178,7 +226,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-400">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9D5BB8]">
                   {t("Programa All Star", "All Star Program")}
                 </p>
                 <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-white sm:text-4xl">
@@ -206,17 +254,27 @@ export default function HomePage() {
             </div>
 
             <div className="mt-10 sm:mt-12 grid gap-5 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {CHEER_TEAMS.map((team) => (
+              {CHEER_TEAMS.map((team, idx) => (
                 <div
                   key={team.slug}
-                  className="group flex flex-col justify-between rounded-2xl border border-white/10 bg-[#0D1322] p-5 sm:p-6 transition-all hover:border-emerald-500/40 hover:bg-[#10182B]"
+                  className={`group flex flex-col justify-between rounded-2xl border border-white/10 bg-[#0D1322] p-5 sm:p-6 transition-all hover:bg-[#10182B] ${
+                    idx % 2 === 0
+                      ? "hover:border-[#00B7A4]/50"
+                      : "hover:border-[#9D5BB8]/55"
+                  }`}
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-lg sm:text-xl font-bold text-white group-hover:text-emerald-300 transition-colors">
+                      <h3 className="text-lg sm:text-xl font-bold text-white group-hover:text-[#00B7A4] transition-colors">
                         {team.name}
                       </h3>
-                      <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] sm:text-[11px] font-semibold text-emerald-300 border border-emerald-500/20">
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] sm:text-[11px] font-semibold border ${
+                          idx % 2 === 0
+                            ? "bg-[#00B7A4]/10 text-[#4CE4D4] border-[#00B7A4]/25"
+                            : "bg-[#7E3D97]/20 text-purple-200 border-[#9D5BB8]/35"
+                        }`}
+                      >
                         {lang === "en" ? team.badgeEn : team.badgeEs}
                       </span>
                     </div>
