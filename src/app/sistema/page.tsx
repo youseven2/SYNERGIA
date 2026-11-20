@@ -26,7 +26,6 @@ export default function SistemaPage() {
   const [state, setState] = useState<SynergiaState | null>(null);
   const [session, setSession] = useState<SessionMode>({ type: "none" });
 
-  const [role, setRole] = useState<"coach" | "atleta">("coach");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -46,47 +45,44 @@ export default function SistemaPage() {
     setLoginError(null);
     if (!state) return;
 
-    if (role === "coach") {
-      if (!username.trim() || !password.trim()) {
-        setLoginError(
-          t(
-            "Ingresa tu usuario y contraseña.",
-            "Enter your username and password."
-          )
-        );
-        return;
-      }
-      const authenticated = authenticateSystemUser(state, username, password);
-      if (!authenticated) {
-        setLoginError(
-          t(
-            "Usuario o contraseña incorrectos. Verifica tus credenciales de acceso.",
-            "Invalid username or password. Please verify your access credentials."
-          )
-        );
-        return;
-      }
-      setSession({ type: "coach", user: authenticated });
-      return;
-    }
-
-    const found = state.athletes.find(
-      (a) =>
-        a.username.toLowerCase() === username.trim().toLowerCase() &&
-        a.password === password
-    );
-
-    if (!found) {
+    if (!username.trim() || !password.trim()) {
       setLoginError(
         t(
-          "Usuario o contraseña de atleta incorrectos. Recuerda que el usuario es la inicial del nombre + apellido y la clave provisional es 123456.",
-          "Incorrect athlete username or password. Remember the username is first initial + last name and the provisional password is 123456."
+          "Ingresa tu usuario y contraseña.",
+          "Enter your username and password."
         )
       );
       return;
     }
 
-    setSession({ type: "athlete", athleteId: found.athleteId });
+    // 1. Detectar automáticamente si corresponde a Entrenador / Administrador
+    const authenticatedSystemUser = authenticateSystemUser(
+      state,
+      username,
+      password
+    );
+    if (authenticatedSystemUser) {
+      setSession({ type: "coach", user: authenticatedSystemUser });
+      return;
+    }
+
+    // 2. Detectar automáticamente si corresponde a un Atleta formalizado
+    const foundAthlete = state.athletes.find(
+      (a) =>
+        a.username.toLowerCase() === username.trim().toLowerCase() &&
+        a.password === password
+    );
+    if (foundAthlete) {
+      setSession({ type: "athlete", athleteId: foundAthlete.athleteId });
+      return;
+    }
+
+    setLoginError(
+      t(
+        "Usuario o contraseña incorrectos. Verifica tus credenciales de acceso.",
+        "Invalid username or password. Please verify your access credentials."
+      )
+    );
   }
 
   function handleUpdateAthlete(updated: AthleteProfile) {
@@ -198,33 +194,6 @@ export default function SistemaPage() {
               <form onSubmit={handleLogin} className="mt-6 space-y-5">
                 <div>
                   <label
-                    htmlFor="role"
-                    className="block text-sm font-semibold text-slate-200"
-                  >
-                    {t("Tipo de acceso", "Access type")}
-                  </label>
-                  <select
-                    id="role"
-                    value={role}
-                    onChange={(e) =>
-                      setRole(e.target.value as "coach" | "atleta")
-                    }
-                    className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
-                  >
-                    <option value="coach">
-                      {t(
-                        "Entrenador / Administrador / Coordinador",
-                        "Coach / Administrator / Coordinator"
-                      )}
-                    </option>
-                    <option value="atleta">
-                      {t("Atleta Formalizado", "Formalized Athlete")}
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
                     htmlFor="username"
                     className="block text-sm font-semibold text-slate-200"
                   >
@@ -236,14 +205,7 @@ export default function SistemaPage() {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder={
-                      role === "coach"
-                        ? "admin"
-                        : t(
-                            "Ej. vmendoza (inicial + apellido)",
-                            "E.g. vmendoza (initial + last name)"
-                          )
-                    }
+                    placeholder={t("Ingresa tu usuario", "Enter your username")}
                     className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                   />
                 </div>
@@ -261,11 +223,7 @@ export default function SistemaPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder={
-                      role === "atleta"
-                        ? t("Clave provisional: 123456", "Provisional password: 123456")
-                        : "••••••••"
-                    }
+                    placeholder="••••••••"
                     className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                   />
                 </div>
