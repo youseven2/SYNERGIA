@@ -104,11 +104,62 @@ export interface SystemUser {
   fullName: string;
 }
 
+export type PaymentMethod = "transferencia" | "pago_movil" | "efectivo";
+export type PaymentStatus = "pendiente" | "aprobado" | "rechazado";
+
+export interface AthletePayment {
+  id: string;
+  athleteId: string;
+  athleteName: string;
+  monthKey: string; // YYYY-MM
+  method: PaymentMethod;
+  amount: number;
+  bank?: string;
+  reference?: string;
+  documentId?: string;
+  phone?: string;
+  cashPhotoDataUrl?: string;
+  notes?: string;
+  status: PaymentStatus;
+  createdAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+}
+
+export interface PaymentNotification {
+  id: string;
+  athleteId: string;
+  monthKey: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
+}
+
+export type MaterialType = "Uniforme" | "Zapatos" | "Lazos" | "Otro material";
+export type RequestStatus = "pendiente" | "aprobado" | "entregado";
+
+export interface MaterialRequest {
+  id: string;
+  athleteId: string;
+  athleteName: string;
+  category: string;
+  itemType: MaterialType;
+  detail: string;
+  quantity: number;
+  notes: string;
+  status: RequestStatus;
+  createdAt: string;
+}
+
 export interface SynergiaState {
   applications: RegistrationApplication[];
   forms: EvaluationFormTemplate[];
   athletes: AthleteProfile[];
   systemUsers: SystemUser[];
+  monthlyFee: number;
+  payments: AthletePayment[];
+  paymentNotifications: PaymentNotification[];
+  materialRequests: MaterialRequest[];
 }
 
 export const CHEER_CATEGORIES = [
@@ -252,6 +303,17 @@ export function authenticateSystemUser(
   );
 }
 
+export function createRecordId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+export function getCurrentMonthKey(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
 export function loadSynergiaState(): SynergiaState {
   if (typeof window === "undefined") {
     return {
@@ -259,6 +321,10 @@ export function loadSynergiaState(): SynergiaState {
       forms: DEFAULT_FORMS,
       athletes: [],
       systemUsers: DEFAULT_SYSTEM_USERS,
+      monthlyFee: 30,
+      payments: [],
+      paymentNotifications: [],
+      materialRequests: [],
     };
   }
   try {
@@ -269,6 +335,10 @@ export function loadSynergiaState(): SynergiaState {
         forms: DEFAULT_FORMS,
         athletes: [],
         systemUsers: DEFAULT_SYSTEM_USERS,
+        monthlyFee: 30,
+        payments: [],
+        paymentNotifications: [],
+        materialRequests: [],
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
       return initial;
@@ -282,6 +352,17 @@ export function loadSynergiaState(): SynergiaState {
           : DEFAULT_FORMS,
       athletes: Array.isArray(parsed.athletes) ? parsed.athletes : [],
       systemUsers: mergeSystemUsers(parsed.systemUsers),
+      monthlyFee:
+        typeof parsed.monthlyFee === "number" && parsed.monthlyFee > 0
+          ? parsed.monthlyFee
+          : 30,
+      payments: Array.isArray(parsed.payments) ? parsed.payments : [],
+      paymentNotifications: Array.isArray(parsed.paymentNotifications)
+        ? parsed.paymentNotifications
+        : [],
+      materialRequests: Array.isArray(parsed.materialRequests)
+        ? parsed.materialRequests
+        : [],
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
     return merged;
@@ -291,6 +372,10 @@ export function loadSynergiaState(): SynergiaState {
       forms: DEFAULT_FORMS,
       athletes: [],
       systemUsers: DEFAULT_SYSTEM_USERS,
+      monthlyFee: 30,
+      payments: [],
+      paymentNotifications: [],
+      materialRequests: [],
     };
   }
 }

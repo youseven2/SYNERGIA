@@ -9,10 +9,13 @@ import {
   EvaluationActivity,
   EvaluationFormTemplate,
   RegistrationApplication,
+  RequestStatus,
   SynergiaState,
   SystemUser,
+  createRecordId,
   generateAthleteId,
   generateAthleteUsername,
+  getCurrentMonthKey,
   saveSynergiaState,
 } from "@/lib/synergia-store";
 import { generateEvaluationPdf } from "@/lib/pdf-report";
@@ -20,7 +23,14 @@ import { AthleteCarnet } from "@/components/AthleteCarnet";
 import { useDevice } from "@/components/DeviceContext";
 import { useI18n } from "@/components/I18nContext";
 
-type CoachTab = "inscripcion" | "formularios" | "evaluacion" | "perfil";
+type CoachTab =
+  | "inscripcion"
+  | "formularios"
+  | "evaluacion"
+  | "perfil"
+  | "contabilidad"
+  | "morosos"
+  | "solicitudes";
 
 interface CoachDashboardProps {
   state: SynergiaState;
@@ -77,6 +87,11 @@ export function CoachDashboard({
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(
     null
   );
+
+  // Contabilidad y Morosos state
+  const [accountingMonth, setAccountingMonth] = useState(getCurrentMonthKey());
+  const [feeInput, setFeeInput] = useState(String(state.monthlyFee || 30));
+  const [notifyFeedback, setNotifyFeedback] = useState<string | null>(null);
 
   const newApplicantsCount = state.applications.filter(
     (a) => a.status === "nuevo"
@@ -348,6 +363,116 @@ export function CoachDashboard({
     state.athletes[0] ??
     null;
 
+  // --- CONTABILIDAD, PAGOS, MOROSOS Y SOLICITUDES ---
+  const pendingPaymentsCount = state.payments.filter(
+    (p) => p.status === "pendiente"
+  ).length;
+  const pendingRequestsCount = state.materialRequests.filter(
+    (r) => r.status === "pendiente"
+  ).length;
+
+  const approvedForMonth = state.payments.filter(
+    (p) => p.monthKey === accountingMonth && p.status === "aprobado"
+  );
+  const totalExpectedMonth = state.athletes.length * (state.monthlyFee || 30);
+  const totalApprovedMonth = approvedForMonth.reduce(
+    (sum, p) => sum + p.amount,
+    0
+  );
+  const totalPendingDebtMonth = Math.max(
+    0,
+    totalExpectedMonth - totalApprovedMonth
+  );
+
+  const defaultersList = state.athletes.filter((ath) => {
+    const paidThisMonth = approvedForMonth
+      .filter((p) => p.athleteId === ath.athleteId)
+      .reduce((s, p) => s + p.amount, 0);
+    return paidThisMonth < (state.monthlyFee || 30);
+  });
+
+  function handleReviewPayment(
+    paymentId: string,
+    decision: "aprobado" | "rechazado"
+  ) {
+    const updated = state.payments.map((p) =>
+      p.id === paymentId
+        ? {
+            ...p,
+            status: decision,
+            reviewedAt: new Date().toISOString(),
+            reviewedBy: currentUser?.username ?? "coach",
+          }
+        : p
+    );
+    commitState({ ...state, payments: updated });
+  }
+
+  function handleSaveMonthlyFee(e: FormEvent) {
+    e.preventDefault();
+    const val = Math.max(1, Number(feeInput) || 30);
+    commitState({ ...state, monthlyFee: val });
+  }
+
+  function handleSendPaymentNotification(athleteId: string, fullName: string) {
+    const notif = {
+      id: createRecordId(`notif-${athleteId}`),
+      athleteId,
+      monthKey: accountingMonth,
+      message: t(
+        `Recordatorio de pago (${accountingMonth}): Los pagos de mensualidad se reciben hasta el 15 de cada mes. Por favor registra tu comprobante en el Módulo de Pagos.`,
+        `Payment reminder (${accountingMonth}): Monthly payments are due by the 15th of each month. Please submit your payment in the Payments Module.`
+      ),
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+    commitState({
+      ...state,
+      paymentNotifications: [notif, ...state.paymentNotifications],
+    });
+    setNotifyFeedback(
+      t(
+        `Notificación de pago enviada a ${fullName}.`,
+        `Payment notification sent to ${fullName}.`
+      )
+    );
+  }
+
+  function handleNotifyAllDefaulters() {
+    if (defaultersList.length === 0) return;
+    const batch = defaultersList.map((ath) => ({
+      id: createRecordId(`notif-${ath.athleteId}`),
+      athleteId: ath.athleteId,
+      monthKey: accountingMonth,
+      message: t(
+        `Recordatorio de pago (${accountingMonth}): Tu mensualidad está pendiente (límite día 15). Registra tu pago en el Módulo de Pagos.`,
+        `Payment reminder (${accountingMonth}): Your monthly fee is pending (due 15th). Submit your payment in the Payments Module.`
+      ),
+      createdAt: new Date().toISOString(),
+      read: false,
+    }));
+    commitState({
+      ...state,
+      paymentNotifications: [...batch, ...state.paymentNotifications],
+    });
+    setNotifyFeedback(
+      t(
+        `Se enviaron ${batch.length} notificaciones de pago a los atletas morosos.`,
+        `Sent ${batch.length} payment notifications to overdue athletes.`
+      )
+    );
+  }
+
+  function handleUpdateRequestStatus(
+    requestId: string,
+    nextStatus: RequestStatus
+  ) {
+    const updated = state.materialRequests.map((r) =>
+      r.id === requestId ? { ...r, status: nextStatus } : r
+    );
+    commitState({ ...state, materialRequests: updated });
+  }
+
   const deviceLabel =
     deviceType === "mobile"
       ? t("Celular", "Mobile")
@@ -399,6 +524,32 @@ export function CoachDashboard({
               )}
             </button>
           )}
+          {pendingPaymentsCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("contabilidad")}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-3.5 py-2 text-xs font-bold text-emerald-200 cursor-pointer"
+            >
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              {t(
+                `${pendingPaymentsCount} pago(s) por verificar`,
+                `${pendingPaymentsCount} payment(s) to verify`
+              )}
+            </button>
+          )}
+          {pendingRequestsCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("solicitudes")}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#9D5BB8]/50 bg-[#7E3D97]/25 px-3.5 py-2 text-xs font-bold text-purple-200 animate-pulse cursor-pointer"
+            >
+              <span className="h-2 w-2 rounded-full bg-[#B575CF]" />
+              {t(
+                `Aviso: ${pendingRequestsCount} solicitud(es) de material`,
+                `Notice: ${pendingRequestsCount} material request(s)`
+              )}
+            </button>
+          )}
           <button
             type="button"
             onClick={onLogout}
@@ -438,6 +589,21 @@ export function CoachDashboard({
               key: "perfil",
               label: t("Perfil del Atleta", "Athlete Profile"),
               badge: state.athletes.length,
+            },
+            {
+              key: "contabilidad",
+              label: t("Contabilidad y Pagos", "Accounting & Payments"),
+              badge: pendingPaymentsCount,
+            },
+            {
+              key: "morosos",
+              label: t("Morosos y Avisos", "Overdue & Notices"),
+              badge: defaultersList.length,
+            },
+            {
+              key: "solicitudes",
+              label: t("Solicitudes de Atletas", "Athlete Requests"),
+              badge: pendingRequestsCount,
             },
           ] as const
         ).map((tab) => (
@@ -1090,6 +1256,315 @@ export function CoachDashboard({
             </div>
           </form>
         </div>
+      )}
+
+      {/* 5. CONTABILIDAD Y VERIFICACIÓN DE PAGOS */}
+      {activeTab === "contabilidad" && (
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 rounded-2xl border border-white/10 bg-[#0D1322] p-5">
+            <div>
+              <h2 className="text-lg font-bold text-white">
+                {t("Módulo de Contabilidad y Verificación de Pagos", "Accounting & Payment Verification")}
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                {t(
+                  "Al aprobar un pago, se descuenta automáticamente del saldo pendiente del mes en contabilidad.",
+                  "Approving a payment automatically deducts it from the month's pending balance."
+                )}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300">
+                  {t("Mes Contable", "Accounting Month")}
+                </label>
+                <input
+                  type="month"
+                  value={accountingMonth}
+                  onChange={(e) => setAccountingMonth(e.target.value)}
+                  className="mt-1 rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                />
+              </div>
+
+              <form onSubmit={handleSaveMonthlyFee} className="flex items-end gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300">
+                    {t("Mensualidad ($)", "Monthly Fee ($)")}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    step="0.01"
+                    value={feeInput}
+                    onChange={(e) => setFeeInput(e.target.value)}
+                    className="mt-1 w-24 rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-emerald-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+                >
+                  {t("Actualizar", "Update")}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-4">
+              <p className="text-xs text-slate-400">{t("Esperado del Mes", "Expected Monthly")}</p>
+              <p className="mt-1 text-2xl font-extrabold text-white">${totalExpectedMonth.toFixed(2)}</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+              <p className="text-xs text-emerald-300">{t("Ingresos Aprobados (Descontado)", "Approved Income")}</p>
+              <p className="mt-1 text-2xl font-extrabold text-emerald-400">${totalApprovedMonth.toFixed(2)}</p>
+            </div>
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4">
+              <p className="text-xs text-rose-300">{t("Saldo Pendiente por Cobrar", "Remaining Balance")}</p>
+              <p className="mt-1 text-2xl font-extrabold text-rose-300">${totalPendingDebtMonth.toFixed(2)}</p>
+            </div>
+            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4">
+              <p className="text-xs text-amber-300">{t("Pagos por Verificar", "Payments to Verify")}</p>
+              <p className="mt-1 text-2xl font-extrabold text-amber-300">{pendingPaymentsCount}</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-4">
+            <h3 className="text-base font-bold text-white">
+              {t("Comprobantes de Pago Recibidos", "Received Payment Proofs")} ({state.payments.length})
+            </h3>
+            {state.payments.length === 0 ? (
+              <p className="py-8 text-center text-xs text-slate-400">
+                {t("No hay pagos registrados por atletas todavía.", "No athlete payments registered yet.")}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {state.payments.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#070B14]/80 p-4 text-xs"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-bold text-white">{p.athleteName}</span>
+                        <span className="font-mono text-amber-300">{p.athleteId}</span>
+                        <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-200">
+                          {p.method.replace("_", " ")} · {p.monthKey}
+                        </span>
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
+                            p.status === "aprobado"
+                              ? "bg-emerald-500/20 text-emerald-300"
+                              : p.status === "rechazado"
+                              ? "bg-rose-500/20 text-rose-300"
+                              : "bg-amber-400/20 text-amber-300"
+                          }`}
+                        >
+                          {p.status}
+                        </span>
+                      </div>
+                      <p className="text-emerald-300 font-extrabold text-sm">
+                        ${p.amount.toFixed(2)}
+                      </p>
+                      {p.bank && (
+                        <p className="text-slate-300">
+                          Banco: {p.bank} · Ref: <span className="font-mono">{p.reference}</span> · Cédula: {p.documentId}
+                          {p.phone ? ` · Tel: ${p.phone}` : ""}
+                        </p>
+                      )}
+                      {p.cashPhotoDataUrl && (
+                        <div className="pt-1">
+                          <p className="text-[11px] text-amber-300 mb-1">Foto de efectivo adjunta:</p>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={p.cashPhotoDataUrl}
+                            alt={`Efectivo ${p.athleteName}`}
+                            className="h-24 w-auto rounded-lg border border-white/15 object-cover"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {p.status === "pendiente" && (
+                      <div className="flex flex-wrap gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleReviewPayment(p.id, "aprobado")}
+                          className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+                        >
+                          {t("Aprobar y Descontar", "Approve & Deduct")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleReviewPayment(p.id, "rechazado")}
+                          className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                        >
+                          {t("Rechazar", "Reject")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* 6. LISTA DE MOROSOS Y NOTIFICACIONES DE PAGO */}
+      {activeTab === "morosos" && (
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-rose-500/30 bg-[#0D1322] p-5">
+            <div>
+              <h2 className="text-lg font-bold text-white">
+                {t("Lista de Atletas Morosos", "Overdue Athletes List")} ({accountingMonth})
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                {t(
+                  "Los pagos de la academia se reciben hasta el día 15 de cada mes. Envía notificaciones de pago a quienes aún no completan su mensualidad.",
+                  "Academy payments are due by the 15th of each month. Send payment notifications to athletes with pending fees."
+                )}
+              </p>
+            </div>
+
+            {defaultersList.length > 0 && (
+              <button
+                type="button"
+                onClick={handleNotifyAllDefaulters}
+                className="rounded-xl bg-rose-500 px-4 py-2.5 text-xs font-bold text-white hover:bg-rose-400 cursor-pointer shrink-0"
+              >
+                {t(
+                  `Notificar a Todos (${defaultersList.length})`,
+                  `Notify All (${defaultersList.length})`
+                )}
+              </button>
+            )}
+          </div>
+
+          {notifyFeedback && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-200">
+              {notifyFeedback}
+            </div>
+          )}
+
+          {defaultersList.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-8 text-center text-xs text-slate-400">
+              {state.athletes.length === 0
+                ? t("No hay atletas formalizados aún.", "No formalized athletes yet.")
+                : t(
+                    "¡Excelente! Todos los atletas están al día con el mes seleccionado.",
+                    "Great! All athletes are up to date for the selected month."
+                  )}
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {defaultersList.map((ath) => (
+                <div
+                  key={ath.athleteId}
+                  className="rounded-2xl border border-rose-500/25 bg-[#0D1322] p-5 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-bold text-white">{ath.fullName}</p>
+                      <p className="text-[11px] font-mono text-amber-300">{ath.athleteId}</p>
+                      <p className="text-[11px] text-slate-400 mt-1">{ath.category}</p>
+                    </div>
+                    <span className="rounded-full bg-rose-500/20 px-2.5 py-0.5 text-[10px] font-bold text-rose-300">
+                      {t("Moroso", "Overdue")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    {t("Teléfono:", "Phone:")} {ath.phone}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleSendPaymentNotification(ath.athleteId, ath.fullName)}
+                    className="w-full rounded-xl border border-amber-400/40 bg-amber-400/15 py-2 text-xs font-bold text-amber-200 hover:bg-amber-400/25 cursor-pointer"
+                  >
+                    {t("Enviar Notificación de Pago", "Send Payment Notification")}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* 7. SOLICITUDES DE MATERIALES DE ATLETAS */}
+      {activeTab === "solicitudes" && (
+        <section className="space-y-6">
+          <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5">
+            <h2 className="text-lg font-bold text-white">
+              {t("Solicitudes de Uniformes y Materiales", "Uniform & Material Requests")} ({state.materialRequests.length})
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              {t(
+                "Solicitudes exclusivas enviadas por los atletas para sus entrenamientos.",
+                "Exclusive requests submitted by athletes for their training."
+              )}
+            </p>
+          </div>
+
+          {state.materialRequests.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-8 text-center text-xs text-slate-400">
+              {t("No hay solicitudes de materiales registradas.", "No material requests registered.")}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {state.materialRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#0D1322] p-5 text-xs"
+                >
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-bold text-white">{req.athleteName}</span>
+                      <span className="font-mono text-amber-300">{req.athleteId}</span>
+                      <span className="rounded-md bg-[#7E3D97]/30 px-2 py-0.5 text-[10px] font-bold text-purple-200">
+                        {req.itemType} (x{req.quantity})
+                      </span>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
+                          req.status === "entregado"
+                            ? "bg-emerald-500/20 text-emerald-300"
+                            : req.status === "aprobado"
+                            ? "bg-sky-500/20 text-sky-300"
+                            : "bg-amber-400/20 text-amber-300"
+                        }`}
+                      >
+                        {req.status}
+                      </span>
+                    </div>
+                    <p className="text-slate-200">{req.detail}</p>
+                    {req.notes && <p className="text-slate-400">{req.notes}</p>}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    {req.status === "pendiente" && (
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateRequestStatus(req.id, "aprobado")}
+                        className="rounded-xl bg-sky-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-sky-400 cursor-pointer"
+                      >
+                        {t("Aprobar", "Approve")}
+                      </button>
+                    )}
+                    {req.status !== "entregado" && (
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateRequestStatus(req.id, "entregado")}
+                        className="rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+                      >
+                        {t("Marcar Entregado", "Mark Delivered")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       )}
 
       {/* MODAL: Asignar Cita y Formulario */}

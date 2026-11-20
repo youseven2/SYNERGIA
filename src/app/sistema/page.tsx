@@ -154,6 +154,8 @@ export default function SistemaPage() {
         ) : session.type === "athlete" && activeAthlete ? (
           <AthletePortal
             athlete={activeAthlete}
+            state={state}
+            onStateChange={setState}
             onUpdateAthlete={handleUpdateAthlete}
             onLogout={handleLogout}
           />
