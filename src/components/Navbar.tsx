@@ -122,7 +122,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070B14]/85 backdrop-blur-md print:hidden">
+      <header className="sticky top-0 z-50 border-b border-[#9D5BB8]/40 bg-gradient-to-r from-[#3B1752]/95 via-[#592678]/95 to-[#3B1752]/95 shadow-lg shadow-[#7E3D97]/25 backdrop-blur-md print:hidden">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group min-w-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -133,14 +133,14 @@ export function Navbar() {
             />
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-300">
-            <Link href="/#inicio" className="hover:text-white transition-colors">
+          <nav className="hidden lg:flex items-center gap-6 text-sm font-semibold text-purple-100">
+            <Link href="/#inicio" className="hover:text-[#4CE4D4] transition-colors">
               {t("Inicio", "Home")}
             </Link>
-            <Link href="/#galeria" className="hover:text-white transition-colors">
+            <Link href="/#galeria" className="hover:text-[#4CE4D4] transition-colors">
               {t("Galería", "Gallery")}
             </Link>
-            <Link href="/#equipos" className="hover:text-white transition-colors">
+            <Link href="/#equipos" className="hover:text-[#4CE4D4] transition-colors">
               {t("Equipos Cheer", "Cheer Teams")}
             </Link>
           </nav>
@@ -245,25 +245,25 @@ export function Navbar() {
         </div>
 
         {menuOpen && (
-          <div className="lg:hidden border-t border-white/10 bg-[#0B1120] px-4 py-4 space-y-3">
+          <div className="lg:hidden border-t border-[#9D5BB8]/35 bg-[#38164D] px-4 py-4 space-y-3">
             <Link
               href="/#inicio"
               onClick={() => setMenuOpen(false)}
-              className="block py-2 text-sm font-medium text-slate-300 hover:text-white"
+              className="block py-2 text-sm font-semibold text-purple-100 hover:text-[#4CE4D4]"
             >
               {t("Inicio", "Home")}
             </Link>
             <Link
               href="/#galeria"
               onClick={() => setMenuOpen(false)}
-              className="block py-2 text-sm font-medium text-slate-300 hover:text-white"
+              className="block py-2 text-sm font-semibold text-purple-100 hover:text-[#4CE4D4]"
             >
               {t("Galería", "Gallery")}
             </Link>
             <Link
               href="/#equipos"
               onClick={() => setMenuOpen(false)}
-              className="block py-2 text-sm font-medium text-slate-300 hover:text-white"
+              className="block py-2 text-sm font-semibold text-purple-100 hover:text-[#4CE4D4]"
             >
               {t("Equipos Cheer", "Cheer Teams")}
             </Link>
@@ -271,14 +271,14 @@ export function Navbar() {
               <Link
                 href="/inscripcion"
                 onClick={() => setMenuOpen(false)}
-                className="w-full text-center rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-2.5 text-sm font-bold text-amber-300"
+                className="w-full text-center rounded-lg border border-[#B575CF]/60 bg-[#7E3D97] px-4 py-2.5 text-sm font-bold text-white"
               >
                 {t("INSCRIBETE", "REGISTER")}
               </Link>
               <Link
                 href="/sistema"
                 onClick={() => setMenuOpen(false)}
-                className="w-full text-center rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-bold text-slate-950"
+                className="w-full text-center rounded-lg bg-[#00B7A4] px-4 py-2.5 text-sm font-bold text-slate-950"
               >
                 {t("Ingresar al Sistema", "System Login")}
               </Link>
