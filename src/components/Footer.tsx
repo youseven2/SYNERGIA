@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useI18n } from "@/components/I18nContext";
 
 export function Footer() {
@@ -22,20 +21,9 @@ export function Footer() {
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-5 sm:gap-6">
-          <Link
-            href="/inscripcion"
-            className="hover:text-amber-300 transition-colors"
-          >
-            {t("Inscripción de Atletas", "Athlete Registration")}
-          </Link>
-          <Link
-            href="/sistema"
-            className="hover:text-emerald-400 transition-colors"
-          >
-            {t("Ingresar al Sistema", "System Login")}
-          </Link>
-        </div>
+        <p className="text-xs text-slate-500">
+          © {new Date().getFullYear()} SYNERGIA ALL STARS
+        </p>
       </div>
     </footer>
   );

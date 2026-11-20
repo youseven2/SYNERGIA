@@ -129,49 +129,6 @@ export default function HomePage() {
                   "We train cheerleading athletes with discipline, technique and competitive spirit. Access the internal system or register to join our All Star teams."
                 )}
               </p>
-
-              {/* Primary Action Buttons */}
-              <div className="mt-8 sm:mt-10 flex flex-col items-center justify-center gap-3.5 sm:flex-row sm:gap-4">
-                <Link
-                  href="/sistema"
-                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2.5 rounded-xl bg-emerald-500 px-7 py-3.5 sm:py-4 text-sm sm:text-base font-bold text-slate-950 shadow-xl shadow-emerald-500/25 hover:bg-emerald-400 hover:-translate-y-0.5 transition-all"
-                >
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"
-                    />
-                  </svg>
-                  {t("Ingresar al Sistema", "System Login")}
-                </Link>
-
-                <Link
-                  href="/inscripcion"
-                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2.5 rounded-xl border border-amber-400/40 bg-amber-400/10 px-7 py-3.5 sm:py-4 text-sm sm:text-base font-bold text-amber-300 hover:bg-amber-400/20 hover:border-amber-300 hover:-translate-y-0.5 transition-all"
-                >
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z"
-                    />
-                  </svg>
-                  {t("INSCRIBETE", "REGISTER NOW")}
-                </Link>
-              </div>
             </div>
 
             {/* Quick Stats Bar */}
@@ -303,15 +260,6 @@ export default function HomePage() {
                     "Exclusive access for directors, coaches and academy coordinators. Manage athletes, attendance, levels and admission requests."
                   )}
                 </p>
-                <div className="mt-6">
-                  <Link
-                    href="/sistema"
-                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-400 transition-colors"
-                  >
-                    {t("Ingresar al Sistema", "System Login")}
-                    <span aria-hidden="true">→</span>
-                  </Link>
-                </div>
               </div>
 
               <div className="rounded-3xl border border-amber-400/25 bg-gradient-to-br from-amber-400/10 to-transparent p-6 sm:p-8">
@@ -330,15 +278,6 @@ export default function HomePage() {
                     "Want to join SYNERGIA ALL STARS? Register your details, choose your category and position (Flyer, Base, Backspot or Tumbling) to schedule your evaluation."
                   )}
                 </p>
-                <div className="mt-6">
-                  <Link
-                    href="/inscripcion"
-                    className="inline-flex items-center gap-2 rounded-xl border border-amber-400/50 bg-amber-400/15 px-5 py-3 text-sm font-bold text-amber-200 hover:bg-amber-400/25 transition-colors"
-                  >
-                    {t("Completar Inscripción", "Complete Registration")}
-                    <span aria-hidden="true">→</span>
-                  </Link>
-                </div>
               </div>
             </div>
           </div>
