@@ -95,7 +95,7 @@ export default function HomePage() {
         <section
           id="inicio"
           className={`relative overflow-hidden border-b border-white/10 ${
-            isMobile ? "pt-12 pb-14" : isTablet ? "pt-16 pb-20" : "pt-24 pb-28"
+            isMobile ? "pt-4 pb-10" : isTablet ? "pt-5 pb-12" : "pt-6 pb-14"
           }`}
         >
           <div
@@ -109,7 +109,7 @@ export default function HomePage() {
 
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-3xl text-center">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#9D5BB8]/45 bg-[#7E3D97]/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-purple-200">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#9D5BB8]/45 bg-[#7E3D97]/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-purple-200">
                 <span className="h-2 w-2 rounded-full bg-[#00B7A4] animate-pulse" />
                 {t(
                   "Escuela Exclusiva de Porrismo",
@@ -127,7 +127,7 @@ export default function HomePage() {
                 />
               </div>
 
-              <p className="mt-5 text-base leading-relaxed text-slate-300 sm:text-lg lg:text-xl">
+              <p className="mt-3 text-base leading-relaxed text-slate-300 sm:text-lg lg:text-xl">
                 {t(
                   "Formamos atletas de porrismo con disciplina, técnica y espíritu competitivo. Accede al sistema interno o inscríbete para formar parte de nuestros equipos All Star.",
                   "We train cheerleading athletes with discipline, technique and competitive spirit. Access the internal system or register to join our All Star teams."
@@ -135,7 +135,7 @@ export default function HomePage() {
               </p>
 
               {/* Botones principales junto al logo central */}
-              <div className="mt-8 sm:mt-10 flex flex-col items-center justify-center gap-3.5 sm:flex-row sm:gap-4">
+              <div className="mt-5 sm:mt-6 flex flex-col items-center justify-center gap-3.5 sm:flex-row sm:gap-4">
                 <Link
                   href="/inscripcion"
                   className="inline-flex w-full sm:w-auto items-center justify-center gap-2.5 rounded-xl border border-[#9D5BB8]/60 bg-[#7E3D97] px-7 py-3.5 sm:py-4 text-sm sm:text-base font-bold text-white shadow-xl shadow-[#7E3D97]/30 hover:bg-[#914BAE] hover:-translate-y-0.5 transition-all"
