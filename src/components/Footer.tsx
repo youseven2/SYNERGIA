@@ -22,7 +22,7 @@ export function Footer() {
         </div>
 
         <p className="text-xs text-slate-500">
-          © {new Date().getFullYear()} SYNERGIA ALL STARS
+          © 2026 SYNERGIA ALL STARS
         </p>
       </div>
     </footer>
