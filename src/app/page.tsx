@@ -122,7 +122,7 @@ export default function HomePage() {
                 <img
                   src="/synergia-logo.svg"
                   alt="SYNERGIA ALL STARS"
-                  className="h-28 sm:h-40 lg:h-48 w-auto object-contain drop-shadow-[0_12px_32px_rgba(0,183,164,0.25)]"
+                  className="w-full max-w-[330px] sm:max-w-[540px] md:max-w-[660px] lg:max-w-[760px] h-auto object-contain drop-shadow-[0_14px_36px_rgba(0,183,164,0.28)]"
                 />
               </div>
 
