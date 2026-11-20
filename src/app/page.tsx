@@ -239,49 +239,6 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-
-        {/* Dual Portal Section */}
-        <section
-          id="acceso-rapido"
-          className="border-t border-white/10 bg-[#0A0F1C] py-16 sm:py-20"
-        >
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="grid gap-6 sm:gap-8 md:grid-cols-2">
-              <div className="rounded-3xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 to-transparent p-6 sm:p-8">
-                <span className="inline-block rounded-lg bg-emerald-500/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-300">
-                  {t("Gestión Interna", "Internal Management")}
-                </span>
-                <h3 className="mt-4 text-xl sm:text-2xl font-bold text-white">
-                  {t("Sistema SYNERGIA ALL STARS", "SYNERGIA ALL STARS System")}
-                </h3>
-                <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
-                  {t(
-                    "Acceso exclusivo para directivos, coaches y coordinadores de la escuela. Administra atletas, asistencias, niveles y solicitudes de ingreso.",
-                    "Exclusive access for directors, coaches and academy coordinators. Manage athletes, attendance, levels and admission requests."
-                  )}
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-amber-400/25 bg-gradient-to-br from-amber-400/10 to-transparent p-6 sm:p-8">
-                <span className="inline-block rounded-lg bg-amber-400/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-300">
-                  {t("Portal de Atletas", "Athlete Portal")}
-                </span>
-                <h3 className="mt-4 text-xl sm:text-2xl font-bold text-white">
-                  {t(
-                    "Inscripción a Equipos Cheer",
-                    "Cheer Team Registration"
-                  )}
-                </h3>
-                <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
-                  {t(
-                    "¿Quieres ser parte de SYNERGIA ALL STARS? Registra tus datos, elige tu categoría y posición (Flyer, Base, Backspot o Tumbling) para agendar tu evaluación.",
-                    "Want to join SYNERGIA ALL STARS? Register your details, choose your category and position (Flyer, Base, Backspot or Tumbling) to schedule your evaluation."
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
 
       <Footer />

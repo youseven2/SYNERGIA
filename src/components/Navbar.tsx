@@ -148,12 +148,6 @@ export function Navbar() {
             <Link href="/#equipos" className="hover:text-white transition-colors">
               {t("Equipos Cheer", "Cheer Teams")}
             </Link>
-            <Link
-              href="/#acceso-rapido"
-              className="hover:text-white transition-colors"
-            >
-              {t("Plataforma", "Platform")}
-            </Link>
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
@@ -277,13 +271,6 @@ export function Navbar() {
               className="block py-2 text-sm font-medium text-slate-300 hover:text-white"
             >
               {t("Equipos Cheer", "Cheer Teams")}
-            </Link>
-            <Link
-              href="/#acceso-rapido"
-              onClick={() => setMenuOpen(false)}
-              className="block py-2 text-sm font-medium text-slate-300 hover:text-white"
-            >
-              {t("Plataforma", "Platform")}
             </Link>
             <div className="pt-2 flex flex-col sm:flex-row gap-2.5 md:hidden">
               <Link
