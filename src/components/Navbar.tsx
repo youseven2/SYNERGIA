@@ -125,17 +125,12 @@ export function Navbar() {
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070B14]/85 backdrop-blur-md print:hidden">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group min-w-0">
-            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 via-teal-500 to-amber-400 text-slate-950 font-black text-base sm:text-lg shadow-lg shadow-emerald-500/20 transition-transform group-hover:scale-105">
-              ★
-            </div>
-            <div className="min-w-0">
-              <span className="block truncate text-sm sm:text-lg font-extrabold tracking-tight text-white">
-                SYNERGIA ALL STARS
-              </span>
-              <span className="block truncate text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
-                {t("Escuela de Porrismo", "Cheerleading Academy")}
-              </span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/synergia-logo.svg"
+              alt="SYNERGIA ALL STARS"
+              className="h-9 sm:h-11 w-auto shrink-0 object-contain transition-transform group-hover:scale-105"
+            />
           </Link>
 
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-300">

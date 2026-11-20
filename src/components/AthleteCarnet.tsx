@@ -80,17 +80,15 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
         <div className="responsive-report-card relative overflow-hidden rounded-2xl border border-emerald-400/40 bg-gradient-to-br from-[#0B1528] via-[#09101E] to-[#060A13] p-4 sm:p-5 shadow-2xl">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-amber-400 text-slate-950 font-black text-sm">
-                ★
-              </div>
-              <div>
-                <p className="text-xs font-black tracking-wider text-white">
-                  SYNERGIA ALL STARS
-                </p>
-                <p className="text-[9px] uppercase tracking-[0.18em] text-emerald-400">
-                  Escuela Exclusiva de Porrismo
-                </p>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/synergia-logo.svg"
+                alt="SYNERGIA ALL STARS"
+                className="h-8 w-auto object-contain"
+              />
+              <p className="text-[9px] uppercase tracking-[0.18em] text-emerald-400">
+                Escuela Exclusiva de Porrismo
+              </p>
             </div>
             <span className="rounded-md bg-amber-400/20 px-2 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-400/30">
               ATLETA OFICIAL

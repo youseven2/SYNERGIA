@@ -165,13 +165,14 @@ export default function SistemaPage() {
           >
             <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0D1322] p-6 sm:p-8 shadow-2xl">
               <div className="text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 font-black text-xl">
-                  ★
-                </div>
-                <h1 className="mt-4 text-2xl font-extrabold text-white">
-                  SYNERGIA ALL STARS
-                </h1>
-                <p className="mt-1.5 text-sm text-slate-400">
+                <h1 className="sr-only">SYNERGIA ALL STARS</h1>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/synergia-logo.svg"
+                  alt="SYNERGIA ALL STARS"
+                  className="mx-auto h-16 sm:h-20 w-auto object-contain"
+                />
+                <p className="mt-2.5 text-sm text-slate-400">
                   {t(
                     "Sistema de Gestión · Escuela Exclusiva de Porrismo",
                     "Management System · Exclusive Cheerleading Academy"

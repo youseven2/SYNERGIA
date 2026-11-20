@@ -116,12 +116,15 @@ export default function HomePage() {
                 )}
               </div>
 
-              <h1 className="text-3xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl leading-[1.08]">
-                SYNERGIA{" "}
-                <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 bg-clip-text text-transparent">
-                  ALL STARS
-                </span>
-              </h1>
+              <h1 className="sr-only">SYNERGIA ALL STARS</h1>
+              <div className="mx-auto flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/synergia-logo.svg"
+                  alt="SYNERGIA ALL STARS"
+                  className="h-28 sm:h-40 lg:h-48 w-auto object-contain drop-shadow-[0_12px_32px_rgba(0,183,164,0.25)]"
+                />
+              </div>
 
               <p className="mt-5 text-base leading-relaxed text-slate-300 sm:text-lg lg:text-xl">
                 {t(
