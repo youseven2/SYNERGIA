@@ -15,9 +15,74 @@ interface SearchResultItem {
   category: string;
 }
 
+interface SynergiaEvent {
+  id: string;
+  date: string; // YYYY-MM-DD
+  titleEs: string;
+  titleEn: string;
+  time: string;
+  location: string;
+  category: string;
+}
+
+const SYNERGIA_EVENTS: SynergiaEvent[] = [
+  {
+    id: "ev-1",
+    date: "2026-11-28",
+    titleEs: "Copa Nacional All Star · Exhibición de Rutinas",
+    titleEn: "All Star National Cup · Routine Showcase",
+    time: "09:00 am – 04:00 pm",
+    location: "Los Dos Caminos, Av. El Centro",
+    category: "Competencia",
+  },
+  {
+    id: "ev-2",
+    date: "2026-12-05",
+    titleEs: "Evaluación de Ingreso · Nuevos Aspirantes",
+    titleEn: "Tryouts & Evaluation · New Applicants",
+    time: "10:00 am – 01:00 pm",
+    location: "Los Dos Caminos / Bellas Artes",
+    category: "Evaluación",
+  },
+  {
+    id: "ev-3",
+    date: "2026-12-12",
+    titleEs: "Gala Navideña SYNERGIA ALL STARS",
+    titleEn: "SYNERGIA ALL STARS Holiday Gala",
+    time: "03:00 pm – 06:30 pm",
+    location: "Bellas Artes, Galería de Arte Nacional",
+    category: "Evento Especial",
+  },
+  {
+    id: "ev-4",
+    date: "2027-01-16",
+    titleEs: "Inicio de Temporada Formativa 2027",
+    titleEn: "2027 Formative Season Kickoff",
+    time: "09:30 am – 03:30 pm",
+    location: "Ambas Sedes",
+    category: "Temporada",
+  },
+];
+
+const MONTHS_ES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+const MONTHS_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+const WEEKDAYS_ES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const WEEKDAYS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [eventsOpen, setEventsOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [calYear, setCalYear] = useState(2026);
+  const [calMonth, setCalMonth] = useState(10); // Noviembre (0-indexed)
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const { lang, toggleLang, t } = useI18n();
   const { isMobile } = useDevice();
@@ -30,6 +95,8 @@ export function Navbar() {
         setSearchOpen((prev) => !prev);
       } else if (e.key === "Escape") {
         setSearchOpen(false);
+        setEventsOpen(false);
+        setAboutOpen(false);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -133,7 +200,7 @@ export function Navbar() {
             />
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-6 text-sm font-semibold text-slate-200">
+          <nav className="hidden lg:flex items-center gap-5 text-sm font-semibold text-slate-200">
             <Link href="/#inicio" className="hover:text-[#00B7A4] transition-colors">
               {t("Inicio", "Home")}
             </Link>
@@ -143,6 +210,20 @@ export function Navbar() {
             <Link href="/#equipos" className="hover:text-[#00B7A4] transition-colors">
               {t("Equipos Cheer", "Cheer Teams")}
             </Link>
+            <button
+              type="button"
+              onClick={() => setEventsOpen(true)}
+              className="hover:text-[#00B7A4] transition-colors cursor-pointer"
+            >
+              {t("Eventos", "Events")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAboutOpen(true)}
+              className="hover:text-[#B575CF] transition-colors cursor-pointer"
+            >
+              {t("Conócenos", "About Us")}
+            </button>
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
@@ -267,6 +348,26 @@ export function Navbar() {
             >
               {t("Equipos Cheer", "Cheer Teams")}
             </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setEventsOpen(true);
+              }}
+              className="block w-full text-left py-2 text-sm font-semibold text-slate-200 hover:text-[#00B7A4] cursor-pointer"
+            >
+              {t("Eventos", "Events")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setAboutOpen(true);
+              }}
+              className="block w-full text-left py-2 text-sm font-semibold text-slate-200 hover:text-[#B575CF] cursor-pointer"
+            >
+              {t("Conócenos", "About Us")}
+            </button>
             <div className="pt-2 flex flex-col sm:flex-row gap-2.5 md:hidden">
               <Link
                 href="/inscripcion"
@@ -361,6 +462,304 @@ export function Navbar() {
                   </button>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ventana Flotante: Calendario de Eventos */}
+      {eventsOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-6 backdrop-blur-md print:hidden"
+          onClick={() => setEventsOpen(false)}
+        >
+          <div
+            className="w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-[28px] border border-white/15 bg-[#0B1120] shadow-[0_28px_80px_rgba(0,0,0,0.85)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-r from-[#00B7A4]/20 via-[#0D1628] to-[#7E3D97]/25 px-5 py-4 sm:px-7">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#4CE4D4]">
+                  SYNERGIA ALL STARS
+                </span>
+                <h2 className="mt-0.5 text-lg sm:text-xl font-extrabold text-white">
+                  {t("Calendario de Eventos", "Events Calendar")}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEventsOpen(false)}
+                aria-label={t("Cerrar", "Close")}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10 text-sm text-white hover:bg-white/20 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-5">
+              {/* Calendario interactivo con navegación por meses y años */}
+              <div className="lg:col-span-3 rounded-2xl border border-white/10 bg-[#070B14] p-4 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setCalYear((y) => y - 1)}
+                      title={t("Año anterior", "Previous year")}
+                      className="rounded-lg border border-white/15 px-2.5 py-1.5 text-xs font-bold text-slate-200 hover:bg-white/10 cursor-pointer"
+                    >
+                      «
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDay(null);
+                        if (calMonth === 0) {
+                          setCalMonth(11);
+                          setCalYear((y) => y - 1);
+                        } else {
+                          setCalMonth((m) => m - 1);
+                        }
+                      }}
+                      title={t("Mes anterior", "Previous month")}
+                      className="rounded-lg border border-white/15 px-2.5 py-1.5 text-xs font-bold text-slate-200 hover:bg-white/10 cursor-pointer"
+                    >
+                      ‹
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      aria-label={t("Mes", "Month")}
+                      value={calMonth}
+                      onChange={(e) => {
+                        setSelectedDay(null);
+                        setCalMonth(Number(e.target.value));
+                      }}
+                      className="rounded-lg border border-white/15 bg-[#0D1322] px-2.5 py-1.5 text-xs font-bold text-white focus:border-[#00B7A4] focus:outline-none"
+                    >
+                      {(lang === "en" ? MONTHS_EN : MONTHS_ES).map((m, idx) => (
+                        <option key={m} value={idx}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label={t("Año", "Year")}
+                      value={calYear}
+                      onChange={(e) => {
+                        setSelectedDay(null);
+                        setCalYear(Number(e.target.value));
+                      }}
+                      className="rounded-lg border border-white/15 bg-[#0D1322] px-2.5 py-1.5 text-xs font-bold text-white focus:border-[#00B7A4] focus:outline-none"
+                    >
+                      {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((yr) => (
+                        <option key={yr} value={yr}>
+                          {yr}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDay(null);
+                        if (calMonth === 11) {
+                          setCalMonth(0);
+                          setCalYear((y) => y + 1);
+                        } else {
+                          setCalMonth((m) => m + 1);
+                        }
+                      }}
+                      title={t("Mes siguiente", "Next month")}
+                      className="rounded-lg border border-white/15 px-2.5 py-1.5 text-xs font-bold text-slate-200 hover:bg-white/10 cursor-pointer"
+                    >
+                      ›
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCalYear((y) => y + 1)}
+                      title={t("Año siguiente", "Next year")}
+                      className="rounded-lg border border-white/15 px-2.5 py-1.5 text-xs font-bold text-slate-200 hover:bg-white/10 cursor-pointer"
+                    >
+                      »
+                    </button>
+                  </div>
+                </div>
+
+                {/* Días de la semana */}
+                <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-slate-400">
+                  {(lang === "en" ? WEEKDAYS_EN : WEEKDAYS_ES).map((d) => (
+                    <div key={d} className="py-1">
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Celdas del calendario */}
+                <div className="grid grid-cols-7 gap-1.5">
+                  {(() => {
+                    const firstWeekday = new Date(calYear, calMonth, 1).getDay();
+                    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+                    const cells = [];
+                    for (let i = 0; i < firstWeekday; i++) {
+                      cells.push(<div key={`empty-${i}`} className="h-10" />);
+                    }
+                    for (let day = 1; day <= daysInMonth; day++) {
+                      const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                      const dayEvents = SYNERGIA_EVENTS.filter((e) => e.date === dateStr);
+                      const hasEvents = dayEvents.length > 0;
+                      const isSelected = selectedDay === dateStr;
+                      cells.push(
+                        <button
+                          key={dateStr}
+                          type="button"
+                          onClick={() =>
+                            setSelectedDay((prev) => (prev === dateStr ? null : dateStr))
+                          }
+                          className={`relative flex h-10 flex-col items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-[#7E3D97] text-white ring-2 ring-[#B575CF]"
+                              : hasEvents
+                              ? "bg-[#00B7A4]/20 text-[#4CE4D4] border border-[#00B7A4]/45 hover:bg-[#00B7A4]/35"
+                              : "bg-white/[0.03] text-slate-300 hover:bg-white/[0.08]"
+                          }`}
+                        >
+                          <span>{day}</span>
+                          {hasEvents && (
+                            <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-amber-300" />
+                          )}
+                        </button>
+                      );
+                    }
+                    return cells;
+                  })()}
+                </div>
+              </div>
+
+              {/* Lista de eventos del mes o día seleccionado */}
+              <div className="lg:col-span-2 flex flex-col space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-white">
+                    {selectedDay
+                      ? `${t("Eventos del", "Events on")} ${selectedDay}`
+                      : `${t("Eventos de", "Events for")} ${
+                          (lang === "en" ? MONTHS_EN : MONTHS_ES)[calMonth]
+                        } ${calYear}`}
+                  </h3>
+                  {selectedDay && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDay(null)}
+                      className="text-[11px] font-semibold text-[#4CE4D4] hover:underline cursor-pointer"
+                    >
+                      {t("Ver mes", "View month")}
+                    </button>
+                  )}
+                </div>
+
+                {(() => {
+                  const monthPrefix = `${calYear}-${String(calMonth + 1).padStart(2, "0")}`;
+                  const visibleEvents = selectedDay
+                    ? SYNERGIA_EVENTS.filter((e) => e.date === selectedDay)
+                    : SYNERGIA_EVENTS.filter((e) => e.date.startsWith(monthPrefix));
+
+                  if (visibleEvents.length === 0) {
+                    return (
+                      <div className="rounded-2xl border border-white/10 bg-[#070B14] p-5 text-center text-xs text-slate-400">
+                        {t(
+                          "No hay eventos programados para esta fecha. Navega por otros meses o años.",
+                          "No events scheduled for this date. Browse other months or years."
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-2.5">
+                      {visibleEvents.map((ev) => (
+                        <div
+                          key={ev.id}
+                          className="rounded-2xl border border-[#00B7A4]/30 bg-[#070B14] p-3.5 text-xs space-y-1"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono font-bold text-amber-300">
+                              {ev.date}
+                            </span>
+                            <span className="rounded-full bg-[#7E3D97]/30 px-2 py-0.5 text-[10px] font-bold text-purple-200">
+                              {ev.category}
+                            </span>
+                          </div>
+                          <p className="text-sm font-bold text-white">
+                            {lang === "en" ? ev.titleEn : ev.titleEs}
+                          </p>
+                          <p className="text-slate-300">{ev.time}</p>
+                          <p className="text-[#4CE4D4]">{ev.location}</p>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ventana Flotante: Conócenos (Misión y Visión) */}
+      {aboutOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-6 backdrop-blur-md print:hidden"
+          onClick={() => setAboutOpen(false)}
+        >
+          <div
+            className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-white/15 bg-[#0B1120] shadow-[0_28px_80px_rgba(0,0,0,0.85)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-r from-[#7E3D97]/30 via-[#0D1628] to-[#00B7A4]/20 px-5 py-4 sm:px-7">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-purple-200">
+                  {t("Conócenos · Escuela de Formación de Porristas", "About Us · Cheerleading Training Academy")}
+                </span>
+                <h2 className="mt-0.5 text-lg sm:text-xl font-extrabold text-white">
+                  SYNERGIA ALL STARS
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAboutOpen(false)}
+                aria-label={t("Cerrar", "Close")}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10 text-sm text-white hover:bg-white/20 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid gap-5 p-5 sm:p-7 md:grid-cols-2">
+              <div className="rounded-2xl border border-[#00B7A4]/35 bg-gradient-to-br from-[#00B7A4]/15 to-[#070B14] p-5 space-y-3">
+                <span className="inline-block rounded-lg bg-[#00B7A4]/20 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-[#4CE4D4]">
+                  {t("Nuestra Misión", "Our Mission")}
+                </span>
+                <p className="text-sm leading-relaxed text-slate-200">
+                  {t(
+                    "Formar integralmente a niños, jóvenes y atletas en la disciplina del porrismo (cheerleading), desarrollando sus capacidades físicas, técnicas y acrobáticas bajo un ambiente seguro, disciplinado y apasionado, fomentando valores de trabajo en equipo, respeto, liderazgo y superación personal.",
+                    "Comprehensively train children, youth and athletes in the discipline of cheerleading, developing their physical, technical and acrobatic skills in a safe, disciplined and passionate environment while fostering teamwork, respect, leadership and personal growth."
+                  )}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-[#9D5BB8]/40 bg-gradient-to-br from-[#7E3D97]/20 to-[#070B14] p-5 space-y-3">
+                <span className="inline-block rounded-lg bg-[#7E3D97]/30 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-purple-200">
+                  {t("Nuestra Visión", "Our Vision")}
+                </span>
+                <p className="text-sm leading-relaxed text-slate-200">
+                  {t(
+                    "Consolidarnos como la escuela de formación de porristas referente a nivel nacional e internacional, reconocida por la excelencia técnica de nuestros equipos All Star, la innovación en nuestros procesos formativos y la proyección de atletas íntegros dentro y fuera de la tarima.",
+                    "Establish ourselves as a leading cheerleading training academy nationally and internationally, recognized for the technical excellence of our All Star teams, innovative training programs and the development of well-rounded athletes on and off the mat."
+                  )}
+                </p>
+              </div>
             </div>
           </div>
         </div>
