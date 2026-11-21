@@ -21,7 +21,11 @@ import {
   saveSynergiaState,
   syncScheduledPaymentReminders,
 } from "@/lib/synergia-store";
-import { generateEvaluationPdf } from "@/lib/pdf-report";
+import {
+  generateAthleteProfilePdf,
+  generateAthletesListPdf,
+  generateEvaluationPdf,
+} from "@/lib/pdf-report";
 import { AthleteCarnet } from "@/components/AthleteCarnet";
 import { AttendanceControl } from "@/components/sistema/AttendanceControl";
 import { useDevice } from "@/components/DeviceContext";
@@ -106,6 +110,8 @@ export function CoachDashboard({
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(
     null
   );
+  const [athleteCategoryFilter, setAthleteCategoryFilter] =
+    useState<string>("TODAS");
 
   // Contabilidad y Morosos state
   const [accountingMonth, setAccountingMonth] = useState(getCurrentMonthKey());
@@ -1493,22 +1499,93 @@ export function CoachDashboard({
         </div>
       )}
 
-      {/* TAB 4: PERFIL DEL ATLETA */}
-      {activeTab === "perfil" && (
+      {/* TAB 4: PERFIL DEL ATLETA Y REPORTES POR CATEGORÍA */}
+      {activeTab === "perfil" && (() => {
+        const filteredAthletes =
+          athleteCategoryFilter === "TODAS"
+            ? state.athletes
+            : state.athletes.filter(
+                (a) => a.category === athleteCategoryFilter
+              );
+        const categoryLabel =
+          athleteCategoryFilter === "TODAS"
+            ? t("Todas las categorías", "All categories")
+            : athleteCategoryFilter;
+
+        return (
         <div className="space-y-6">
+          {/* Barra de Reportes y Filtro por Categoría */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#0D1322] p-5">
+            <div>
+              <h2 className="text-lg font-bold text-white">
+                {t("Listado y Reportes de Atletas en la Academia", "Academy Athletes List & Reports")}
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                {t("Total registrados:", "Total registered:")}{" "}
+                <strong className="text-emerald-300">{state.athletes.length}</strong>{" "}
+                · {t("Mostrando en filtro:", "Showing in filter:")}{" "}
+                <strong className="text-amber-300">{filteredAthletes.length}</strong>
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <select
+                aria-label={t("Filtrar por categoría", "Filter by category")}
+                value={athleteCategoryFilter}
+                onChange={(e) => setAthleteCategoryFilter(e.target.value)}
+                className="rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-xs font-semibold text-white focus:border-[#00B7A4] focus:outline-none"
+              >
+                <option value="TODAS">
+                  {t("Todas las categorías", "All categories")} ({state.athletes.length})
+                </option>
+                {CHEER_CATEGORIES.map((cat) => {
+                  const cnt = state.athletes.filter(
+                    (a) => a.category === cat
+                  ).length;
+                  return (
+                    <option key={cat} value={cat}>
+                      {cat} ({cnt})
+                    </option>
+                  );
+                })}
+              </select>
+
+              <button
+                type="button"
+                disabled={filteredAthletes.length === 0}
+                onClick={() =>
+                  generateAthletesListPdf(filteredAthletes, categoryLabel)
+                }
+                className="rounded-xl bg-[#00B7A4] px-4 py-2.5 text-xs font-bold text-slate-950 hover:bg-[#14CEBA] disabled:opacity-40 cursor-pointer shrink-0"
+              >
+                {t(
+                  "Descargar Listado PDF (Membretado)",
+                  "Download Athletes List PDF"
+                )}
+              </button>
+            </div>
+          </div>
+
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-3">
               <h2 className="text-lg font-bold text-white">
-                Atletas Formalizados ({state.athletes.length})
+                {t("Atletas", "Athletes")} ({filteredAthletes.length})
               </h2>
-              {state.athletes.length === 0 ? (
+              {filteredAthletes.length === 0 ? (
                 <p className="text-xs text-slate-400">
-                  Aún no hay atletas formalizados. Formaliza un aspirante desde
-                  el módulo INSCRIPCION o Evaluación.
+                  {state.athletes.length === 0
+                    ? t(
+                        "Aún no hay atletas formalizados. Formaliza un aspirante desde el módulo INSCRIPCION o Evaluación.",
+                        "No formalized athletes yet."
+                      )
+                    : t(
+                        "No hay atletas en esta categoría.",
+                        "No athletes in this category."
+                      )}
                 </p>
               ) : (
-                <div className="space-y-2">
-                  {state.athletes.map((ath) => (
+                <div className="space-y-2 max-h-[540px] overflow-y-auto pr-1">
+                  {filteredAthletes.map((ath) => (
                     <button
                       key={ath.athleteId}
                       type="button"
@@ -1526,10 +1603,11 @@ export function CoachDashboard({
                         ID: {ath.athleteId}
                       </p>
                       <p className="text-[11px] text-slate-400">
+                        {ath.category}
+                      </p>
+                      <p className="text-[11px] text-slate-400">
                         Usuario: <strong>{ath.username}</strong> ·{" "}
-                        {ath.mustChangePassword
-                          ? "Clave prov: 123456"
-                          : "Clave actualizada"}
+                        {ath.profileCompleted ? "Ficha Completa" : "Ficha Pendiente"}
                       </p>
                     </button>
                   ))}
@@ -1550,9 +1628,20 @@ export function CoachDashboard({
                           {selectedAthlete.category} · {selectedAthlete.position}
                         </p>
                       </div>
-                      <span className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 font-mono text-xs font-bold text-amber-300">
-                        ID: {selectedAthlete.athleteId}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 font-mono text-xs font-bold text-amber-300">
+                          ID: {selectedAthlete.athleteId}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            generateAthleteProfilePdf(selectedAthlete)
+                          }
+                          className="rounded-xl border border-[#4CE4D4]/40 bg-[#00B7A4]/15 px-3 py-1.5 text-xs font-bold text-[#4CE4D4] hover:bg-[#00B7A4]/25 cursor-pointer"
+                        >
+                          {t("Perfil PDF (Membretado)", "Profile PDF")}
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-3 text-xs pt-2 border-t border-white/10">
@@ -1574,7 +1663,7 @@ export function CoachDashboard({
                       </div>
                       <div>
                         <span className="text-slate-400 block">
-                          Estado de ficha médica:
+                          Estado de ficha oficial:
                         </span>
                         <span className="text-emerald-300 font-semibold">
                           {selectedAthlete.profileCompleted
@@ -1595,7 +1684,8 @@ export function CoachDashboard({
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* MODAL: Agregar Descripción y Ponderación */}
       {showActivityModal && (

@@ -8,10 +8,12 @@ import {
   MaterialType,
   PaymentMethod,
   SynergiaState,
+  calculateAge,
   getAthletePaymentStatus,
   getCurrentMonthKey,
   saveSynergiaState,
 } from "@/lib/synergia-store";
+import { generateAthleteProfilePdf } from "@/lib/pdf-report";
 import { AthleteCarnet } from "@/components/AthleteCarnet";
 import { AttendanceControl } from "@/components/sistema/AttendanceControl";
 import { useDevice } from "@/components/DeviceContext";
@@ -51,20 +53,56 @@ export function AthletePortal({
   const [confirmPass, setConfirmPass] = useState("");
   const [passError, setPassError] = useState<string | null>(null);
 
-  // Formulario de perfil y salud
+  // Formulario oficial de formalización del atleta
+  const [fullName, setFullName] = useState(athlete.fullName);
+  const [birthDate, setBirthDate] = useState(athlete.birthDate);
+  const [age, setAge] = useState(String(athlete.age || ""));
+  const [documentId, setDocumentId] = useState(athlete.documentId || "");
   const [bloodType, setBloodType] = useState(athlete.bloodType || "O+");
+  const [hasMedicalCondition, setHasMedicalCondition] = useState<boolean>(
+    Boolean(athlete.hasMedicalCondition)
+  );
+  const [medicalConditionDetail, setMedicalConditionDetail] = useState(
+    athlete.medicalConditionDetail || ""
+  );
   const [hasAllergies, setHasAllergies] = useState(athlete.hasAllergies);
   const [allergiesDetail, setAllergiesDetail] = useState(
     athlete.allergiesDetail
   );
-  const [medications, setMedications] = useState(athlete.medications);
-  const [medicalNotes, setMedicalNotes] = useState(athlete.medicalNotes);
-  const [homeAddress, setHomeAddress] = useState(athlete.homeAddress);
-  const [emergencyContact, setEmergencyContact] = useState(
-    athlete.emergencyContact
+  const [repName, setRepName] = useState(
+    athlete.repName || (!athlete.isMinor ? athlete.fullName : "")
   );
-  const [emergencyPhone, setEmergencyPhone] = useState(athlete.emergencyPhone);
+  const [repDocumentId, setRepDocumentId] = useState(
+    athlete.repDocumentId || (!athlete.isMinor ? athlete.documentId : "")
+  );
+  const [repPhone, setRepPhone] = useState(
+    athlete.repPhone || athlete.phone || ""
+  );
+  const [repSecondaryPhone, setRepSecondaryPhone] = useState(
+    athlete.repSecondaryPhone || athlete.emergencyPhone || ""
+  );
+  const [clubJoinDate, setClubJoinDate] = useState(
+    athlete.clubJoinDate || athlete.formalizedAt.slice(0, 10)
+  );
+  const [homeAddress, setHomeAddress] = useState(athlete.homeAddress);
   const [photoDataUrl, setPhotoDataUrl] = useState(athlete.photoDataUrl);
+  const [athleteIdDocName, setAthleteIdDocName] = useState(
+    athlete.athleteIdDocName || ""
+  );
+  const [athleteIdDocDataUrl, setAthleteIdDocDataUrl] = useState(
+    athlete.athleteIdDocDataUrl || ""
+  );
+  const [repIdDocName, setRepIdDocName] = useState(athlete.repIdDocName || "");
+  const [repIdDocDataUrl, setRepIdDocDataUrl] = useState(
+    athlete.repIdDocDataUrl || ""
+  );
+  const [acceptedTerms, setAcceptedTerms] = useState(
+    Boolean(athlete.acceptedTerms)
+  );
+  const [acceptedWaiver, setAcceptedWaiver] = useState(
+    Boolean(athlete.acceptedWaiver)
+  );
+  const [fileError, setFileError] = useState<string | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   // Módulo de Pagos state
@@ -238,19 +276,79 @@ export function AthletePortal({
     reader.readAsDataURL(file);
   }
 
+  function handleDocUpload(
+    e: ChangeEvent<HTMLInputElement>,
+    target: "athleteDoc" | "repDoc"
+  ) {
+    setFileError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setFileError("El archivo supera el tamaño máximo permitido de 10 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        if (target === "athleteDoc") {
+          setAthleteIdDocName(file.name);
+          setAthleteIdDocDataUrl(reader.result);
+        } else {
+          setRepIdDocName(file.name);
+          setRepIdDocDataUrl(reader.result);
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleBirthDateChange(val: string) {
+    setBirthDate(val);
+    const calc = calculateAge(val);
+    if (calc !== null) setAge(String(calc));
+  }
+
   function handleSaveProfile(e: FormEvent) {
     e.preventDefault();
+    setFileError(null);
+    if (!acceptedTerms || !acceptedWaiver) {
+      setFileError(
+        "Debes aceptar los Términos y Condiciones y el Relevo de Responsabilidad para formalizar tu inscripción."
+      );
+      return;
+    }
+    const parsedAge = Math.max(1, Number(age) || athlete.age || 10);
     onUpdateAthlete({
       ...athlete,
+      fullName: fullName.trim(),
+      birthDate,
+      age: parsedAge,
+      isMinor: parsedAge < 18,
+      documentId: documentId.trim(),
       bloodType,
+      hasMedicalCondition,
+      medicalConditionDetail: hasMedicalCondition
+        ? medicalConditionDetail.trim()
+        : "",
       hasAllergies,
       allergiesDetail: hasAllergies ? allergiesDetail.trim() : "",
-      medications: medications.trim(),
-      medicalNotes: medicalNotes.trim(),
+      medications: hasMedicalCondition ? medicalConditionDetail.trim() : "Ninguno",
+      medicalNotes: hasMedicalCondition ? medicalConditionDetail.trim() : "",
+      repName: repName.trim(),
+      repDocumentId: repDocumentId.trim(),
+      repPhone: repPhone.trim(),
+      repSecondaryPhone: repSecondaryPhone.trim(),
+      emergencyContact: repName.trim(),
+      emergencyPhone: repSecondaryPhone.trim() || repPhone.trim(),
       homeAddress: homeAddress.trim(),
-      emergencyContact: emergencyContact.trim(),
-      emergencyPhone: emergencyPhone.trim(),
+      clubJoinDate,
       photoDataUrl,
+      athleteIdDocName,
+      athleteIdDocDataUrl,
+      repIdDocName,
+      repIdDocDataUrl,
+      acceptedTerms,
+      acceptedWaiver,
       profileCompleted: true,
     });
     setSavedSuccess(true);
@@ -530,47 +628,108 @@ export function AthletePortal({
       {activeTab === "perfil" && (
         <>
 
-      {/* Formulario con datos anteriores + salud + dirección + foto carnet */}
+      {/* Formulario oficial de formalización del atleta */}
       <form
         onSubmit={handleSaveProfile}
-        className="rounded-3xl border border-white/10 bg-[#0D1322] p-6 sm:p-8 space-y-6"
+        className="rounded-3xl border border-white/10 bg-[#0D1322] p-5 sm:p-8 space-y-6"
       >
-        <div>
-          <h2 className="text-lg font-bold text-white">
-            Ficha Médica, Dirección y Foto Tipo Carnet
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Completa tus datos para generar tu carnet oficial con código de
-            barras.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-white">
+              Formulario Oficial de Formalización · Perfil del Atleta
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Completa todos los campos obligatorios y adjunta tu foto tipo carnet en fondo blanco para generar tu carnet y perfil membretado en PDF.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => generateAthleteProfilePdf(athlete)}
+            className="shrink-0 rounded-xl border border-[#4CE4D4]/40 bg-[#00B7A4]/15 px-4 py-2 text-xs font-bold text-[#4CE4D4] hover:bg-[#00B7A4]/25 cursor-pointer"
+          >
+            Descargar Perfil PDF (Hoja Membretada)
+          </button>
         </div>
 
         {/* Datos precargados de inscripción */}
         <div className="grid gap-4 sm:grid-cols-3 rounded-2xl border border-white/10 bg-[#070B14]/70 p-4 text-xs">
           <div>
-            <span className="text-slate-400 block">ID del Atleta:</span>
+            <span className="text-slate-400 block">ID Oficial del Atleta:</span>
             <span className="font-mono font-bold text-amber-300">
               {athlete.athleteId}
             </span>
           </div>
           <div>
-            <span className="text-slate-400 block">Documento / Cédula:</span>
-            <span className="font-semibold text-white">
-              {athlete.documentId}
+            <span className="text-slate-400 block">Categoría Asignada:</span>
+            <span className="font-semibold text-emerald-300">
+              {athlete.category}
             </span>
           </div>
           <div>
-            <span className="text-slate-400 block">Categoría y Posición:</span>
-            <span className="font-semibold text-emerald-300">
-              {athlete.category} ({athlete.position})
+            <span className="text-slate-400 block">Posición:</span>
+            <span className="font-semibold text-white">
+              {athlete.position}
             </span>
           </div>
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-semibold text-slate-200">
+              Nombre Completo y Apellido del Deportista *
+            </label>
+            <input
+              type="text"
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-semibold text-slate-200">
-              Tipo de sangre *
+              Fecha de Nacimiento *
+            </label>
+            <input
+              type="date"
+              required
+              value={birthDate}
+              onChange={(e) => handleBirthDateChange(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white [color-scheme:dark] focus:border-emerald-400 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-200">
+              Edad *
+            </label>
+            <input
+              type="number"
+              min={1}
+              required
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-200">
+              Cédula de Identidad del Deportista
+            </label>
+            <input
+              type="text"
+              value={documentId}
+              onChange={(e) => setDocumentId(e.target.value)}
+              placeholder="V-00000000"
+              className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-200">
+              Tipo de Sangre *
             </label>
             <select
               value={bloodType}
@@ -585,62 +744,156 @@ export function AthletePortal({
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-200">
-              Foto tipo carnet *
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2.5 text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-500 file:px-3 file:py-1 file:text-xs file:font-bold file:text-slate-950"
-            />
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="flex items-center gap-2.5 text-sm font-semibold text-slate-200 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hasAllergies}
-                onChange={(e) => setHasAllergies(e.target.checked)}
-                className="h-4 w-4 accent-amber-400"
-              />
-              ¿Sufre de alguna alergia?
-            </label>
-            {hasAllergies && (
-              <input
-                type="text"
-                required
-                value={allergiesDetail}
-                onChange={(e) => setAllergiesDetail(e.target.value)}
-                placeholder="Especifique a qué es alérgico (alimentos, medicamentos, etc.)"
-                className="mt-2 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
-              />
+          {/* Condición médica o lesión previa */}
+          <div className="sm:col-span-2 rounded-2xl border border-white/10 bg-[#070B14]/60 p-4 space-y-3">
+            <p className="text-sm font-semibold text-slate-200">
+              ¿El deportista padece alguna enfermedad, condición médica o lesión previa que el club deba tener en cuenta previamente? *
+            </p>
+            <div className="flex gap-6 text-sm text-white">
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="medicalCondition"
+                  checked={hasMedicalCondition}
+                  onChange={() => setHasMedicalCondition(true)}
+                  className="accent-emerald-400"
+                />
+                Sí
+              </label>
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="medicalCondition"
+                  checked={!hasMedicalCondition}
+                  onChange={() => setHasMedicalCondition(false)}
+                  className="accent-emerald-400"
+                />
+                No
+              </label>
+            </div>
+            {hasMedicalCondition && (
+              <div>
+                <label className="block text-xs font-semibold text-amber-300">
+                  Si la respuesta anterior fue SÍ, por favor especifique el diagnóstico, si requiere medicación y las recomendaciones que debe conocer el club *
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  value={medicalConditionDetail}
+                  onChange={(e) => setMedicalConditionDetail(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
             )}
           </div>
 
-          <div>
+          {/* Alergia a medicamentos */}
+          <div className="sm:col-span-2 rounded-2xl border border-white/10 bg-[#070B14]/60 p-4 space-y-3">
+            <p className="text-sm font-semibold text-slate-200">
+              ¿El deportista es alérgico/a a algún medicamento? *
+            </p>
+            <div className="flex gap-6 text-sm text-white">
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="medAllergy"
+                  checked={hasAllergies}
+                  onChange={() => setHasAllergies(true)}
+                  className="accent-emerald-400"
+                />
+                Sí
+              </label>
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="medAllergy"
+                  checked={!hasAllergies}
+                  onChange={() => setHasAllergies(false)}
+                  className="accent-emerald-400"
+                />
+                No
+              </label>
+            </div>
+            {hasAllergies && (
+              <div>
+                <label className="block text-xs font-semibold text-amber-300">
+                  Si la respuesta anterior fue SÍ, por favor especifique a cuáles medicamentos *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={allergiesDetail}
+                  onChange={(e) => setAllergiesDetail(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Datos del Representante */}
+          <div className="sm:col-span-2">
             <label className="block text-sm font-semibold text-slate-200">
-              Medicamentos que toma actualmente
+              Nombre y apellido del Representante (si el deportista es menor de edad) o sus datos personales si es mayor de edad *
             </label>
             <input
               type="text"
-              value={medications}
-              onChange={(e) => setMedications(e.target.value)}
-              placeholder="Ej. Ninguno / Inhalador..."
+              required
+              value={repName}
+              onChange={(e) => setRepName(e.target.value)}
               className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
             />
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-slate-200">
-              Observaciones médicas / lesiones previas
+              Cédula de Identidad del Representante (o personal si es mayor de edad) *
             </label>
             <input
               type="text"
-              value={medicalNotes}
-              onChange={(e) => setMedicalNotes(e.target.value)}
-              placeholder="Ej. Asma leve, esguince previo..."
+              required
+              value={repDocumentId}
+              onChange={(e) => setRepDocumentId(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-200">
+              Fecha de Ingreso al Club *
+            </label>
+            <input
+              type="date"
+              required
+              value={clubJoinDate}
+              onChange={(e) => setClubJoinDate(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white [color-scheme:dark] focus:border-emerald-400 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-200">
+              Número de Contacto Principal del Representante (o personal) *
+            </label>
+            <input
+              type="tel"
+              required
+              value={repPhone}
+              onChange={(e) => setRepPhone(e.target.value)}
+              placeholder="+58 414 000 0000"
+              className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-200">
+              Número de Contacto Secundario del Representante (o personal) *
+            </label>
+            <input
+              type="tel"
+              required
+              value={repSecondaryPhone}
+              onChange={(e) => setRepSecondaryPhone(e.target.value)}
+              placeholder="+58 424 000 0000"
               className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
             />
           </div>
@@ -659,47 +912,151 @@ export function AthletePortal({
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-200">
-              Contacto de emergencia *
-            </label>
-            <input
-              type="text"
-              required
-              value={emergencyContact}
-              onChange={(e) => setEmergencyContact(e.target.value)}
-              placeholder="Nombre completo"
-              className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
-            />
-          </div>
+          {/* Documentos requeridos (máx 10 MB) */}
+          <div className="sm:col-span-2 grid gap-4 sm:grid-cols-3 rounded-2xl border border-white/10 bg-[#070B14]/60 p-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-200">
+                Foto partida de nacimiento o cédula del deportista *
+              </label>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                PDF, documento o imagen. Máx: 10 MB.
+              </p>
+              <input
+                type="file"
+                accept="image/*,.pdf,.doc,.docx"
+                required={!athleteIdDocDataUrl}
+                onChange={(e) => handleDocUpload(e, "athleteDoc")}
+                className="mt-2 w-full text-xs text-slate-300 file:mr-2 file:rounded-lg file:border-0 file:bg-white/15 file:px-2.5 file:py-1.5 file:text-xs file:font-bold file:text-white"
+              />
+              {athleteIdDocName && (
+                <p className="mt-1 text-[10px] text-emerald-300 truncate">
+                  ✓ {athleteIdDocName}
+                </p>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-200">
-              Teléfono de emergencia *
-            </label>
-            <input
-              type="tel"
-              required
-              value={emergencyPhone}
-              onChange={(e) => setEmergencyPhone(e.target.value)}
-              placeholder="+58 412 000 0000"
-              className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white focus:border-emerald-400 focus:outline-none"
-            />
+            <div>
+              <label className="block text-xs font-bold text-amber-300">
+                Foto tipo carnet del deportista (fondo blanco) *
+              </label>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Imagen para carnet y perfil PDF. Máx: 10 MB.
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                required={!photoDataUrl}
+                onChange={handlePhotoUpload}
+                className="mt-2 w-full text-xs text-slate-300 file:mr-2 file:rounded-lg file:border-0 file:bg-emerald-500 file:px-2.5 file:py-1.5 file:text-xs file:font-bold file:text-slate-950"
+              />
+              {photoDataUrl && (
+                <p className="mt-1 text-[10px] text-emerald-300">
+                  ✓ Foto carnet cargada
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-200">
+                Foto cédula del representante (o personal) *
+              </label>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                PDF, documento o imagen. Máx: 10 MB.
+              </p>
+              <input
+                type="file"
+                accept="image/*,.pdf,.doc,.docx"
+                required={!repIdDocDataUrl}
+                onChange={(e) => handleDocUpload(e, "repDoc")}
+                className="mt-2 w-full text-xs text-slate-300 file:mr-2 file:rounded-lg file:border-0 file:bg-white/15 file:px-2.5 file:py-1.5 file:text-xs file:font-bold file:text-white"
+              />
+              {repIdDocName && (
+                <p className="mt-1 text-[10px] text-emerald-300 truncate">
+                  ✓ {repIdDocName}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        {savedSuccess && (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-200">
-            ¡Perfil guardado! Tu carnet digital ha sido actualizado abajo.
+        {/* TÉRMINOS Y CONDICIONES */}
+        <div className="rounded-2xl border border-[#00B7A4]/30 bg-[#070B14]/80 p-5 space-y-3 text-xs text-slate-300 leading-relaxed">
+          <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#4CE4D4]">
+            Términos y Condiciones
+          </h3>
+          <ol className="list-decimal pl-5 space-y-2">
+            <li>
+              Los deportistas del club, deben tener una actitud deportiva adecuada y respetuosa, con sus compañeros, entrenadores y demás personas del ámbito deportivo.
+            </li>
+            <li>
+              Los pagos de la mensualidad se deben realizar los primeros 10 días de cada mes, dicha fecha podrá extenderse (según sea el caso) hasta el día 15 del mes, luego de esta fecha, el deportista no podrá ingresar a los entrenamientos hasta que el PAGO de la mensualidad sea saldado. Con el retraso de 3 mensualidades consecutivas, el deportista no podrá seguir participando en las actividades.
+            </li>
+            <li>
+              Con el fin de garantizar la continuidad de las actividades deportivas, se establece que la mensualidad deberá ser cancelada en su totalidad durante los doce meses del año, incluyendo los meses de agosto y diciembre. Estos pagos contribuyen a cubrir los costos operativos del club durante todo el año.
+            </li>
+          </ol>
+          <label className="flex items-center gap-2.5 pt-2 text-sm font-bold text-white cursor-pointer">
+            <input
+              type="checkbox"
+              required
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="h-4 w-4 accent-[#00B7A4]"
+            />
+            He leído y acepto los Términos y Condiciones *
+          </label>
+        </div>
+
+        {/* RELEVO DE RESPONSABILIDAD */}
+        <div className="rounded-2xl border border-[#9D5BB8]/35 bg-[#070B14]/80 p-5 space-y-3 text-xs text-slate-300 leading-relaxed">
+          <h3 className="text-sm font-extrabold uppercase tracking-wider text-purple-200">
+            Relevo de Responsabilidad
+          </h3>
+          <p>
+            Yo, padre / representante de la deportista a continuación inscrita, entendiendo que la práctica deportiva es una actividad que puede ocasionar daños o lesiones, autorizo a que mi representado(a) participe en los entrenamientos del club deportivo de Porrismo Synergia All Stars. Y relevo al club, entrenadores y empleados, de toda responsabilidad o compromisos relacionados con daños y perjuicios que surjan o que tengan que ver con la participación de mi hijo(a) en este deporte (Porrismo/Cheerleading).
+          </p>
+          <p>
+            Certifico que conozco los riesgos y responsabilidades, y que mi representado(a) está en la capacidad de practicar esta disciplina deportiva, y que la misma es voluntaria.
+          </p>
+          <label className="flex items-center gap-2.5 pt-2 text-sm font-bold text-white cursor-pointer">
+            <input
+              type="checkbox"
+              required
+              checked={acceptedWaiver}
+              onChange={(e) => setAcceptedWaiver(e.target.checked)}
+              className="h-4 w-4 accent-[#7E3D97]"
+            />
+            He leído y acepto el Relevo de Responsabilidad del Club *
+          </label>
+        </div>
+
+        {fileError && (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+            {fileError}
           </div>
         )}
 
-        <button
-          type="submit"
-          className="rounded-xl bg-emerald-500 px-6 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
-        >
-          Guardar Perfil y Generar Carnet
-        </button>
+        {savedSuccess && (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-200">
+            ¡Inscripción formalizada y perfil guardado! Ya puedes descargar tu Perfil en Hoja Membretada PDF o imprimir tu Carnet abajo.
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="submit"
+            className="rounded-xl bg-emerald-500 px-6 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+          >
+            Guardar Perfil y Generar Carnet
+          </button>
+          <button
+            type="button"
+            onClick={() => generateAthleteProfilePdf(athlete)}
+            className="rounded-xl border border-[#4CE4D4]/40 bg-[#00B7A4]/15 px-6 py-3 text-sm font-bold text-[#4CE4D4] hover:bg-[#00B7A4]/25 cursor-pointer"
+          >
+            Descargar Perfil PDF (Hoja Membretada)
+          </button>
+        </div>
       </form>
 
       {/* Carnet Digital */}

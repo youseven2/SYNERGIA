@@ -79,12 +79,15 @@ export interface AthleteProfile {
   repName?: string;
   repDocumentId?: string;
   repPhone?: string;
+  repSecondaryPhone?: string;
   email: string;
   phone: string;
   category: string;
   position: string;
   // Datos de perfil y salud completados por el atleta
   bloodType: string;
+  hasMedicalCondition?: boolean;
+  medicalConditionDetail?: string;
   hasAllergies: boolean;
   allergiesDetail: string;
   medications: string;
@@ -92,7 +95,14 @@ export interface AthleteProfile {
   homeAddress: string;
   emergencyContact: string;
   emergencyPhone: string;
+  clubJoinDate?: string;
   photoDataUrl: string;
+  athleteIdDocName?: string;
+  athleteIdDocDataUrl?: string;
+  repIdDocName?: string;
+  repIdDocDataUrl?: string;
+  acceptedTerms?: boolean;
+  acceptedWaiver?: boolean;
   profileCompleted: boolean;
   formalizedAt: string;
 }
