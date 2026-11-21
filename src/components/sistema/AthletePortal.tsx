@@ -186,6 +186,22 @@ export function AthletePortal({
     });
   }
 
+  function handleMarkEventNoticeRead(evNotifId: string) {
+    commitState({
+      ...state,
+      eventNotifications: state.eventNotifications.map((n) =>
+        n.id === evNotifId
+          ? {
+              ...n,
+              readByAthleteIds: n.readByAthleteIds.includes(athlete.athleteId)
+                ? n.readByAthleteIds
+                : [...n.readByAthleteIds, athlete.athleteId],
+            }
+          : n
+      ),
+    });
+  }
+
   function handlePasswordChange(e: FormEvent) {
     e.preventDefault();
     setPassError(null);
@@ -311,6 +327,12 @@ export function AthletePortal({
   const unreadNotifs = state.paymentNotifications.filter(
     (n) => n.athleteId === athlete.athleteId && !n.read
   );
+  const unreadEventNotices = state.eventNotifications.filter(
+    (ev) =>
+      !ev.readByAthleteIds.includes(athlete.athleteId) &&
+      (ev.targetCategories.includes("TODAS") ||
+        ev.targetCategories.includes(athlete.category))
+  );
 
   return (
     <div
@@ -374,6 +396,44 @@ export function AthletePortal({
                   {t("Entendido", "Dismiss")}
                 </button>
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Avisos y Recordatorios de Eventos para la categoría del atleta */}
+      {unreadEventNotices.length > 0 && (
+        <div className="space-y-2.5">
+          {unreadEventNotices.map((ev) => (
+            <div
+              key={ev.id}
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-[#00B7A4]/45 bg-[#00B7A4]/15 p-4 text-xs text-slate-100"
+            >
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-extrabold uppercase tracking-wider text-[#4CE4D4]">
+                    {t("Aviso de Evento", "Event Notice")} · {ev.eventDate}
+                  </span>
+                  <span className="rounded-md bg-[#7E3D97]/40 px-2 py-0.5 text-[10px] font-bold text-purple-100">
+                    {t(
+                      `Recordatorio (${ev.reminderDaysBefore} días antes)`,
+                      `Reminder (${ev.reminderDaysBefore} days before)`
+                    )}
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-white">{ev.eventTitle}</p>
+                <p className="text-slate-200">
+                  {ev.eventTime} · {ev.eventLocation}
+                </p>
+                {ev.message && <p className="text-slate-300">{ev.message}</p>}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleMarkEventNoticeRead(ev.id)}
+                className="shrink-0 rounded-xl border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-bold text-white hover:bg-white/20 cursor-pointer"
+              >
+                {t("Entendido", "Got it")}
+              </button>
             </div>
           ))}
         </div>

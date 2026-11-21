@@ -104,6 +104,10 @@ export function CoachDashboard({
   const [evCategory, setEvCategory] = useState("Competencia");
   const [evDescription, setEvDescription] = useState("");
   const [evFlyerDataUrl, setEvFlyerDataUrl] = useState("");
+  const [evTargetAll, setEvTargetAll] = useState(true);
+  const [evSelectedCategories, setEvSelectedCategories] = useState<string[]>([]);
+  const [evReminderDays, setEvReminderDays] = useState("3");
+  const [evSendNotice, setEvSendNotice] = useState(true);
   const [evSavedMsg, setEvSavedMsg] = useState<string | null>(null);
   const [coachFlyerModal, setCoachFlyerModal] = useState<{
     title: string;
@@ -503,13 +507,27 @@ export function CoachDashboard({
     reader.readAsDataURL(file);
   }
 
+  function toggleEvCategory(cat: string) {
+    setEvTargetAll(false);
+    setEvSelectedCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+  }
+
   function handleAddEvent(e: FormEvent) {
     e.preventDefault();
     setEvSavedMsg(null);
     if (!evTitle.trim() || !evDate) return;
 
+    const targetCategories =
+      evTargetAll || evSelectedCategories.length === 0
+        ? ["TODAS"]
+        : evSelectedCategories;
+    const reminderDays = Math.max(0, Number(evReminderDays) || 0);
+    const eventId = createRecordId("ev");
+
     const newEv: SynergiaEvent = {
-      id: createRecordId("ev"),
+      id: eventId,
       date: evDate,
       title: evTitle.trim(),
       time: evTime.trim() || "Por definir",
@@ -517,11 +535,39 @@ export function CoachDashboard({
       description: evDescription.trim(),
       category: evCategory.trim() || "Evento",
       flyerDataUrl: evFlyerDataUrl || undefined,
+      targetCategories,
+      reminderDaysBefore: reminderDays,
     };
+
+    const nextNotifications = evSendNotice
+      ? [
+          {
+            id: createRecordId("evnotif"),
+            eventId,
+            eventTitle: newEv.title,
+            eventDate: newEv.date,
+            eventTime: newEv.time,
+            eventLocation: newEv.location,
+            reminderDaysBefore: reminderDays,
+            targetCategories,
+            message:
+              newEv.description ||
+              t(
+                `Próximo evento el ${newEv.date} a las ${newEv.time} en ${newEv.location}.`,
+                `Upcoming event on ${newEv.date} at ${newEv.time} in ${newEv.location}.`
+              ),
+            flyerDataUrl: newEv.flyerDataUrl,
+            createdAt: new Date().toISOString(),
+            readByAthleteIds: [],
+          },
+          ...state.eventNotifications,
+        ]
+      : state.eventNotifications;
 
     commitState({
       ...state,
       events: [newEv, ...state.events],
+      eventNotifications: nextNotifications,
     });
 
     setEvTitle("");
@@ -530,10 +576,15 @@ export function CoachDashboard({
     setEvDescription("");
     setEvFlyerDataUrl("");
     setEvSavedMsg(
-      t(
-        "Evento publicado en el calendario público correctamente.",
-        "Event published to the public calendar successfully."
-      )
+      evSendNotice
+        ? t(
+            "Evento publicado y aviso enviado a las categorías seleccionadas.",
+            "Event published and notice sent to selected categories."
+          )
+        : t(
+            "Evento publicado en el calendario público correctamente.",
+            "Event published to the public calendar successfully."
+          )
     );
   }
 
@@ -541,6 +592,9 @@ export function CoachDashboard({
     commitState({
       ...state,
       events: state.events.filter((ev) => ev.id !== eventId),
+      eventNotifications: state.eventNotifications.filter(
+        (n) => n.eventId !== eventId
+      ),
     });
   }
 
@@ -1963,6 +2017,85 @@ export function CoachDashboard({
                 placeholder={t("Detalles, indicaciones o requisitos del evento...", "Event details, notes or requirements...")}
                 className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
               />
+            </div>
+
+            <div className="rounded-2xl border border-[#00B7A4]/35 bg-[#00B7A4]/10 p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-xs font-bold text-[#4CE4D4]">
+                  {t("Aviso y Recordatorio a Atletas", "Athlete Notice & Reminder")}
+                </label>
+                <label className="inline-flex items-center gap-2 text-xs text-white cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={evSendNotice}
+                    onChange={(e) => setEvSendNotice(e.target.checked)}
+                    className="h-4 w-4 accent-[#00B7A4]"
+                  />
+                  {t("Enviar aviso automático", "Send automatic notice")}
+                </label>
+              </div>
+
+              {evSendNotice && (
+                <>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-200">
+                      {t("Días de anticipación para recordatorio", "Reminder days in advance")}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={60}
+                      value={evReminderDays}
+                      onChange={(e) => setEvReminderDays(e.target.value)}
+                      className="mt-1 w-28 rounded-xl border border-white/15 bg-[#070B14] px-3 py-1.5 text-xs text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-semibold text-slate-200">
+                        {t("Categorías a notificar:", "Categories to notify:")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEvTargetAll(true);
+                          setEvSelectedCategories([]);
+                        }}
+                        className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-colors cursor-pointer ${
+                          evTargetAll
+                            ? "bg-[#00B7A4] text-slate-950"
+                            : "border border-white/20 text-slate-300 hover:bg-white/10"
+                        }`}
+                      >
+                        {t("Todas las categorías", "All categories")}
+                      </button>
+                    </div>
+
+                    <div className="grid gap-1.5 sm:grid-cols-2">
+                      {CHEER_CATEGORIES.map((cat) => {
+                        const selected =
+                          !evTargetAll && evSelectedCategories.includes(cat);
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => toggleEvCategory(cat)}
+                            className={`rounded-xl border px-2.5 py-1.5 text-left text-[11px] font-semibold transition-all cursor-pointer ${
+                              selected
+                                ? "border-[#9D5BB8] bg-[#7E3D97]/35 text-white"
+                                : "border-white/10 bg-[#070B14]/70 text-slate-300 hover:border-white/30"
+                            }`}
+                          >
+                            {selected ? "✓ " : ""}
+                            {cat}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="rounded-2xl border border-[#9D5BB8]/35 bg-[#7E3D97]/10 p-4 space-y-2">

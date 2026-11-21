@@ -160,6 +160,23 @@ export interface SynergiaEvent {
   description: string;
   category: string;
   flyerDataUrl?: string;
+  targetCategories?: string[]; // ["TODAS"] o categorías específicas
+  reminderDaysBefore?: number;
+}
+
+export interface EventNotification {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventDate: string;
+  eventTime: string;
+  eventLocation: string;
+  reminderDaysBefore: number;
+  targetCategories: string[];
+  message: string;
+  flyerDataUrl?: string;
+  createdAt: string;
+  readByAthleteIds: string[];
 }
 
 export interface SynergiaState {
@@ -172,6 +189,7 @@ export interface SynergiaState {
   paymentNotifications: PaymentNotification[];
   materialRequests: MaterialRequest[];
   events: SynergiaEvent[];
+  eventNotifications: EventNotification[];
 }
 
 export const DEFAULT_EVENTS: SynergiaEvent[] = [
@@ -368,6 +386,7 @@ export function loadSynergiaState(): SynergiaState {
       paymentNotifications: [],
       materialRequests: [],
       events: DEFAULT_EVENTS,
+      eventNotifications: [],
     };
   }
   try {
@@ -383,6 +402,7 @@ export function loadSynergiaState(): SynergiaState {
         paymentNotifications: [],
         materialRequests: [],
         events: DEFAULT_EVENTS,
+        eventNotifications: [],
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
       return initial;
@@ -408,6 +428,9 @@ export function loadSynergiaState(): SynergiaState {
         ? parsed.materialRequests
         : [],
       events: Array.isArray(parsed.events) ? parsed.events : DEFAULT_EVENTS,
+      eventNotifications: Array.isArray(parsed.eventNotifications)
+        ? parsed.eventNotifications
+        : [],
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
     return merged;
@@ -422,6 +445,7 @@ export function loadSynergiaState(): SynergiaState {
       paymentNotifications: [],
       materialRequests: [],
       events: DEFAULT_EVENTS,
+      eventNotifications: [],
     };
   }
 }
