@@ -24,6 +24,7 @@ import { useDevice } from "@/components/DeviceContext";
 import { useI18n } from "@/components/I18nContext";
 
 type CoachTab =
+  | "menu"
   | "inscripcion"
   | "formularios"
   | "evaluacion"
@@ -47,7 +48,7 @@ export function CoachDashboard({
 }: CoachDashboardProps) {
   const { deviceType, isMobile, isTablet } = useDevice();
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState<CoachTab>("inscripcion");
+  const [activeTab, setActiveTab] = useState<CoachTab>("menu");
 
   // Cita & Formalización modals/inline state
   const [citaAppId, setCitaAppId] = useState<string | null>(null);
@@ -560,78 +561,274 @@ export function CoachDashboard({
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div
-        className={`gap-2 border-b border-white/10 pb-3 ${
-          isMobile
-            ? "grid grid-cols-2"
-            : "flex flex-wrap"
-        }`}
-      >
-        {(
-          [
-            {
-              key: "inscripcion",
-              label: t("INSCRIPCION", "REGISTRATION"),
-              badge: newApplicantsCount,
-            },
-            {
-              key: "formularios",
-              label: t("Formularios", "Forms"),
-              badge: state.forms.length,
-            },
-            {
-              key: "evaluacion",
-              label: t("Evaluación y PDF", "Evaluation & PDF"),
-              badge: 0,
-            },
-            {
-              key: "perfil",
-              label: t("Perfil del Atleta", "Athlete Profile"),
-              badge: state.athletes.length,
-            },
-            {
-              key: "contabilidad",
-              label: t("Contabilidad y Pagos", "Accounting & Payments"),
-              badge: pendingPaymentsCount,
-            },
-            {
-              key: "morosos",
-              label: t("Morosos y Avisos", "Overdue & Notices"),
-              badge: defaultersList.length,
-            },
-            {
-              key: "solicitudes",
-              label: t("Solicitudes de Atletas", "Athlete Requests"),
-              badge: pendingRequestsCount,
-            },
-          ] as const
-        ).map((tab) => (
+      {/* Menú Principal estilo Mosaico Metro (o barra compacta cuando hay un módulo abierto) */}
+      {activeTab === "menu" ? (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-300">
+              {t("Módulos del Sistema", "System Modules")}
+            </h2>
+            <span className="text-xs text-slate-400">
+              {t("Selecciona un mosaico para abrir", "Select a tile to open")}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 auto-rows-[132px] sm:auto-rows-[148px]">
+            {/* 1. INSCRIPCION (Wide Tile) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("inscripcion")}
+              className="col-span-2 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-[#4CE4D4]/30 bg-gradient-to-br from-[#008C7E] to-[#005F56] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.015] hover:border-[#4CE4D4] cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+                </svg>
+                <span className="rounded-lg bg-black/25 px-2.5 py-1 text-xs font-extrabold text-white">
+                  {state.applications.length} {t("total", "total")}
+                  {newApplicantsCount > 0 ? ` · ${newApplicantsCount} ${t("nuevo(s)", "new")}` : ""}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold tracking-tight text-white">
+                  {t("INSCRIPCION", "REGISTRATION")}
+                </p>
+                <p className="text-[11px] text-teal-100/85">
+                  {t("Aspirantes, citas y formalización", "Applicants, appointments & onboarding")}
+                </p>
+              </div>
+            </button>
+
+            {/* 2. FORMULARIOS */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("formularios")}
+              className="col-span-1 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-[#B575CF]/35 bg-gradient-to-br from-[#6B2D83] to-[#4A1C5C] p-4 text-left shadow-lg transition-all duration-200 hover:scale-[1.02] hover:border-[#D49AEB] cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-8 w-8 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+                </svg>
+                <span className="rounded-lg bg-black/25 px-2 py-0.5 text-xs font-extrabold text-white">
+                  {state.forms.length}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm sm:text-base font-extrabold text-white">
+                  {t("Formularios", "Forms")}
+                </p>
+                <p className="text-[11px] text-purple-100/80 truncate">
+                  {t("Criterios y ponderación", "Criteria & weights")}
+                </p>
+              </div>
+            </button>
+
+            {/* 3. EVALUACIÓN Y PDF */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("evaluacion")}
+              className="col-span-1 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-sky-400/35 bg-gradient-to-br from-sky-700 to-indigo-900 p-4 text-left shadow-lg transition-all duration-200 hover:scale-[1.02] hover:border-sky-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-8 w-8 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                <span className="rounded-lg bg-black/25 px-2 py-0.5 text-[10px] font-extrabold text-sky-100">
+                  PDF
+                </span>
+              </div>
+              <div>
+                <p className="text-sm sm:text-base font-extrabold text-white">
+                  {t("Evaluación y PDF", "Evaluation & PDF")}
+                </p>
+                <p className="text-[11px] text-sky-100/80 truncate">
+                  {t("Calificar y exportar", "Score & export")}
+                </p>
+              </div>
+            </button>
+
+            {/* 4. CONTABILIDAD Y PAGOS (Wide Tile) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("contabilidad")}
+              className="col-span-2 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-emerald-400/35 bg-gradient-to-br from-emerald-700 to-emerald-950 p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.015] hover:border-emerald-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="text-right">
+                  <span className="block text-base sm:text-lg font-black text-white">
+                    ${totalApprovedMonth.toFixed(2)}
+                  </span>
+                  {pendingPaymentsCount > 0 && (
+                    <span className="inline-block rounded-md bg-amber-400/25 px-2 py-0.5 text-[10px] font-extrabold text-amber-200">
+                      {pendingPaymentsCount} {t("por verificar", "to verify")}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Contabilidad y Pagos", "Accounting & Payments")}
+                </p>
+                <p className="text-[11px] text-emerald-100/80">
+                  {t("Verificar transferencias, pago móvil y efectivo", "Verify transfers, mobile pay & cash")}
+                </p>
+              </div>
+            </button>
+
+            {/* 5. PERFIL DEL ATLETA */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("perfil")}
+              className="col-span-1 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-violet-400/35 bg-gradient-to-br from-[#5B21B6] to-[#3B0764] p-4 text-left shadow-lg transition-all duration-200 hover:scale-[1.02] hover:border-violet-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-8 w-8 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
+                </svg>
+                <span className="rounded-lg bg-black/25 px-2 py-0.5 text-xs font-extrabold text-white">
+                  {state.athletes.length}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm sm:text-base font-extrabold text-white">
+                  {t("Perfil del Atleta", "Athlete Profile")}
+                </p>
+                <p className="text-[11px] text-violet-100/80 truncate">
+                  {t("Fichas y carnets", "Profiles & ID cards")}
+                </p>
+              </div>
+            </button>
+
+            {/* 6. MOROSOS Y AVISOS */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("morosos")}
+              className="col-span-1 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-rose-400/35 bg-gradient-to-br from-rose-700 to-rose-950 p-4 text-left shadow-lg transition-all duration-200 hover:scale-[1.02] hover:border-rose-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-8 w-8 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                </svg>
+                <span className="rounded-lg bg-black/25 px-2 py-0.5 text-xs font-extrabold text-white">
+                  {defaultersList.length}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm sm:text-base font-extrabold text-white">
+                  {t("Morosos y Avisos", "Overdue & Notices")}
+                </p>
+                <p className="text-[11px] text-rose-100/80 truncate">
+                  {t("Cobro hasta el 15", "Due by the 15th")}
+                </p>
+              </div>
+            </button>
+
+            {/* 7. SOLICITUDES DE ATLETAS (Wide Tile) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("solicitudes")}
+              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-amber-400/35 bg-gradient-to-r from-[#7E3D97]/90 via-[#381B4C] to-[#0F4C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-amber-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-amber-200">
+                  {pendingRequestsCount} {t("pendiente(s)", "pending")} · {state.materialRequests.length} {t("total", "total")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Solicitudes de Atletas", "Athlete Material Requests")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t("Uniformes, zapatos, lazos y materiales de entrenamiento", "Uniforms, shoes, bows & training materials")}
+                </p>
+              </div>
+            </button>
+          </div>
+        </section>
+      ) : (
+        <div
+          className={`gap-2 border-b border-white/10 pb-3 ${
+            isMobile ? "grid grid-cols-2" : "flex flex-wrap items-center"
+          }`}
+        >
           <button
-            key={tab.key}
             type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-              activeTab === tab.key
-                ? "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20"
-                : "bg-[#0D1322] text-slate-300 border border-white/10 hover:text-white"
-            }`}
+            onClick={() => setActiveTab("menu")}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#9D5BB8]/60 bg-[#7E3D97]/30 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold text-purple-100 hover:bg-[#7E3D97]/50 transition-all cursor-pointer"
           >
-            {tab.label}
-            {tab.badge > 0 && (
-              <span
-                className={`rounded-full px-2 py-0.5 text-[11px] font-extrabold ${
-                  activeTab === tab.key
-                    ? "bg-slate-950/20 text-slate-950"
-                    : "bg-amber-400/20 text-amber-300"
-                }`}
-              >
-                {tab.badge}
-              </span>
-            )}
+            ← {t("Menú", "Menu")}
           </button>
-        ))}
-      </div>
+          {(
+            [
+              {
+                key: "inscripcion",
+                label: t("INSCRIPCION", "REGISTRATION"),
+                badge: newApplicantsCount,
+              },
+              {
+                key: "formularios",
+                label: t("Formularios", "Forms"),
+                badge: state.forms.length,
+              },
+              {
+                key: "evaluacion",
+                label: t("Evaluación y PDF", "Evaluation & PDF"),
+                badge: 0,
+              },
+              {
+                key: "perfil",
+                label: t("Perfil del Atleta", "Athlete Profile"),
+                badge: state.athletes.length,
+              },
+              {
+                key: "contabilidad",
+                label: t("Contabilidad y Pagos", "Accounting & Payments"),
+                badge: pendingPaymentsCount,
+              },
+              {
+                key: "morosos",
+                label: t("Morosos y Avisos", "Overdue & Notices"),
+                badge: defaultersList.length,
+              },
+              {
+                key: "solicitudes",
+                label: t("Solicitudes de Atletas", "Athlete Requests"),
+                badge: pendingRequestsCount,
+              },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeTab === tab.key
+                  ? "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20"
+                  : "bg-[#0D1322] text-slate-300 border border-white/10 hover:text-white"
+              }`}
+            >
+              {tab.label}
+              {tab.badge > 0 && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-extrabold ${
+                    activeTab === tab.key
+                      ? "bg-slate-950/20 text-slate-950"
+                      : "bg-amber-400/20 text-amber-300"
+                  }`}
+                >
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* TAB 1: INSCRIPCION */}
       {activeTab === "inscripcion" && (
