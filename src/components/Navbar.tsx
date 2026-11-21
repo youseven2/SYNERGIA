@@ -729,29 +729,53 @@ export function Navbar() {
               </button>
             </div>
 
-            <div className="grid gap-5 p-5 sm:p-7 md:grid-cols-2">
-              <div className="rounded-2xl border border-[#00B7A4]/35 bg-gradient-to-br from-[#00B7A4]/15 to-[#070B14] p-5 space-y-3">
-                <span className="inline-block rounded-lg bg-[#00B7A4]/20 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-[#4CE4D4]">
-                  {t("Nuestra Misión", "Our Mission")}
+            <div className="space-y-5 p-5 sm:p-7">
+              {/* ¿Qué significa el porrismo? */}
+              <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5 space-y-2.5">
+                <span className="inline-block rounded-lg bg-amber-400/20 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-amber-300">
+                  {t("¿Qué significa el porrismo?", "What Does Cheerleading Mean?")}
                 </span>
                 <p className="text-sm leading-relaxed text-slate-200">
                   {t(
-                    "Formar integralmente a niños, jóvenes y atletas en la disciplina del porrismo (cheerleading), desarrollando sus capacidades físicas, técnicas y acrobáticas bajo un ambiente seguro, disciplinado y apasionado, fomentando valores de trabajo en equipo, respeto, liderazgo y superación personal.",
-                    "Comprehensively train children, youth and athletes in the discipline of cheerleading, developing their physical, technical and acrobatic skills in a safe, disciplined and passionate environment while fostering teamwork, respect, leadership and personal growth."
+                    "El porrismo (cheerleading) es una disciplina deportiva dinámica y de gran trabajo colaborativo que integra de forma progresiva elementos de gimnasia, acrobacias, saltos, pirámides, elevaciones y baile deportivo. Permitiendo a deportistas de todas las edades y niveles, desarrollar progresivamente sus capacidades físicas y técnicas, alcanzando el alto rendimiento mientras fomenta la confianza mutua, la coordinación y el trabajo en equipo.",
+                    "Cheerleading is a dynamic and highly collaborative sport discipline that progressively integrates elements of gymnastics, acrobatics, jumps, pyramids, stunts and sports dance. It allows athletes of all ages and levels to progressively develop their physical and technical abilities, reaching high performance while fostering mutual trust, coordination and teamwork."
                   )}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-[#9D5BB8]/40 bg-gradient-to-br from-[#7E3D97]/20 to-[#070B14] p-5 space-y-3">
-                <span className="inline-block rounded-lg bg-[#7E3D97]/30 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-purple-200">
-                  {t("Nuestra Visión", "Our Vision")}
-                </span>
-                <p className="text-sm leading-relaxed text-slate-200">
+              <div className="space-y-3">
+                <h3 className="text-xs font-extrabold uppercase tracking-[0.18em] text-slate-300">
                   {t(
-                    "Consolidarnos como la escuela de formación de porristas referente a nivel nacional e internacional, reconocida por la excelencia técnica de nuestros equipos All Star, la innovación en nuestros procesos formativos y la proyección de atletas íntegros dentro y fuera de la tarima.",
-                    "Establish ourselves as a leading cheerleading training academy nationally and internationally, recognized for the technical excellence of our All Star teams, innovative training programs and the development of well-rounded athletes on and off the mat."
+                    "Misión y Visión del Club de Porrismo SYNERGIA ALL STARS",
+                    "Mission & Vision of SYNERGIA ALL STARS Cheerleading Club"
                   )}
-                </p>
+                </h3>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div className="rounded-2xl border border-[#00B7A4]/35 bg-gradient-to-br from-[#00B7A4]/15 to-[#070B14] p-5 space-y-3">
+                    <span className="inline-block rounded-lg bg-[#00B7A4]/20 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-[#4CE4D4]">
+                      {t("Misión", "Mission")}
+                    </span>
+                    <p className="text-sm leading-relaxed text-slate-200">
+                      {t(
+                        "Brindar una formación integral y adecuada a nuestros atletas, fomentando valores fundamentales como disciplina, respeto, trabajo en equipo, esfuerzo, responsabilidad y hábitos de vida saludables para impactar positivamente en su desarrollo personal y deportivo.",
+                        "Provide comprehensive and appropriate training to our athletes, fostering core values such as discipline, respect, teamwork, effort, responsibility and healthy lifestyle habits to positively impact their personal and athletic development."
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#9D5BB8]/40 bg-gradient-to-br from-[#7E3D97]/20 to-[#070B14] p-5 space-y-3">
+                    <span className="inline-block rounded-lg bg-[#7E3D97]/30 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-purple-200">
+                      {t("Visión", "Vision")}
+                    </span>
+                    <p className="text-sm leading-relaxed text-slate-200">
+                      {t(
+                        "Consolidarnos como un club deportivo de referencia en el porrismo, reconocido por la excelencia técnica de nuestros deportistas, la calidad de nuestra formación humana y la creación de un espacio donde cada atleta alcance su máximo potencial.",
+                        "Establish ourselves as a benchmark sports club in cheerleading, recognized for the technical excellence of our athletes, the quality of our human formation and the creation of a space where every athlete reaches their full potential."
+                      )}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
