@@ -6,6 +6,11 @@ export const metadata: Metadata = {
   title: "SYNERGIA ALL STARS | Escuela Exclusiva de Porrismo",
   description:
     "SYNERGIA ALL STARS: escuela exclusiva de atletas de porrismo. Inscripción a equipos y acceso al sistema administrativo.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
