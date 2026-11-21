@@ -8,10 +8,12 @@ import {
   MaterialType,
   PaymentMethod,
   SynergiaState,
+  getAthletePaymentStatus,
   getCurrentMonthKey,
   saveSynergiaState,
 } from "@/lib/synergia-store";
 import { AthleteCarnet } from "@/components/AthleteCarnet";
+import { AttendanceControl } from "@/components/sistema/AttendanceControl";
 import { useDevice } from "@/components/DeviceContext";
 import { useI18n } from "@/components/I18nContext";
 
@@ -23,7 +25,7 @@ interface AthletePortalProps {
   onLogout: () => void;
 }
 
-type AthleteTab = "perfil" | "pagos" | "solicitudes";
+type AthleteTab = "perfil" | "pagos" | "solicitudes" | "asistencia";
 
 const BLOOD_TYPES = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
 const MATERIAL_TYPES: MaterialType[] = [
@@ -440,9 +442,29 @@ export function AthletePortal({
       )}
 
       {/* Botones ordenados de módulos exclusivos del atleta */}
+      {(() => {
+        const payStatus = getAthletePaymentStatus(state, athlete);
+        return payStatus.isSuspended ? (
+          <div className="rounded-2xl border border-rose-500/50 bg-rose-500/20 p-4 text-xs text-rose-100">
+            <p className="text-sm font-extrabold text-rose-200">
+              {t(
+                "ATLETA SUSPENDIDO DE PRÁCTICAS (2 MESES EN MORA)",
+                "ATHLETE SUSPENDED FROM PRACTICE (2 MONTHS OVERDUE)"
+              )}
+            </p>
+            <p className="mt-1">
+              {t(
+                `Tienes 2 meses consecutivos pendientes (${payStatus.previousMonth} y ${payStatus.currentMonth}). Tu asistencia será rechazada hasta cancelar la totalidad de tu mora en el Módulo de Pagos.`,
+                `You have 2 consecutive unpaid months (${payStatus.previousMonth} & ${payStatus.currentMonth}). Attendance will be rejected until full overdue balance is paid in the Payments Module.`
+              )}
+            </p>
+          </div>
+        ) : null;
+      })()}
+
       <div
         className={`gap-3 ${
-          isMobile ? "grid grid-cols-1" : "grid grid-cols-3"
+          isMobile ? "grid grid-cols-1" : "grid grid-cols-2 lg:grid-cols-4"
         }`}
       >
         {(
@@ -450,7 +472,13 @@ export function AthletePortal({
             {
               key: "perfil",
               title: t("Mi Perfil y Carnet", "My Profile & ID Card"),
-              subtitle: t("Ficha médica, foto y código", "Medical sheet, photo & ID"),
+              subtitle: t("Ficha médica, foto y QR", "Medical sheet, photo & QR"),
+              badge: 0,
+            },
+            {
+              key: "asistencia",
+              title: t("Control de Asistencia", "Attendance Control"),
+              subtitle: t("Validar QR o ID de carnet", "Validate QR or ID card"),
               badge: 0,
             },
             {
@@ -489,6 +517,15 @@ export function AthletePortal({
           </button>
         ))}
       </div>
+
+      {activeTab === "asistencia" && (
+        <AttendanceControl
+          state={state}
+          onStateChange={onStateChange}
+          recordedBy={athlete.username}
+          restrictedAthlete={athlete}
+        />
+      )}
 
       {activeTab === "perfil" && (
         <>

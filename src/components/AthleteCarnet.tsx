@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { AthleteProfile } from "@/lib/synergia-store";
 import { useI18n } from "@/components/I18nContext";
 import { useDevice } from "@/components/DeviceContext";
@@ -56,6 +58,23 @@ function BarcodeSvg({ value }: { value: string }) {
 export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
   const { t } = useI18n();
   const { isMobile } = useDevice();
+  const [qrUrl, setQrUrl] = useState<string>("");
+
+  useEffect(() => {
+    let active = true;
+    QRCode.toDataURL(`SYNERGIA:${athlete.athleteId}`, {
+      width: 160,
+      margin: 1,
+      color: { dark: "#070B14", light: "#FFFFFF" },
+    })
+      .then((url) => {
+        if (active) setQrUrl(url);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [athlete.athleteId]);
 
   return (
     <div className="space-y-4">
@@ -209,12 +228,26 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
             </div>
           </div>
 
-          {/* Firma del Representante Legal de la Academia */}
-          <div className="mt-5 border-t border-white/10 pt-3 flex items-end justify-between gap-4">
-            <p className="text-[9px] leading-snug text-slate-400 max-w-[55%]">
-              Este carnet es personal e intransferible y acredita al atleta
-              como miembro activo de SYNERGIA ALL STARS.
-            </p>
+          {/* Código QR de Asistencia + Firma del Representante Legal */}
+          <div className="mt-5 border-t border-white/10 pt-3 flex flex-wrap items-end justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {qrUrl && (
+                <div className="rounded-lg bg-white p-1.5 shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={qrUrl}
+                    alt={`QR ${athlete.athleteId}`}
+                    className="h-16 w-16"
+                  />
+                </div>
+              )}
+              <p className="text-[9px] leading-snug text-slate-400 max-w-[160px]">
+                {t(
+                  "Escanea este QR en el Control de Asistencia. Personal e intransferible.",
+                  "Scan this QR in Attendance Control. Personal & non-transferable."
+                )}
+              </p>
+            </div>
 
             <div className="text-center">
               <svg

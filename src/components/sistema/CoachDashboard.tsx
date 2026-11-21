@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useState, FormEvent } from "react";
+import { ChangeEvent, useEffect, useState, FormEvent } from "react";
 import {
   ActivityScore,
   AthleteProfile,
@@ -16,11 +16,14 @@ import {
   createRecordId,
   generateAthleteId,
   generateAthleteUsername,
+  getAthletePaymentStatus,
   getCurrentMonthKey,
   saveSynergiaState,
+  syncScheduledPaymentReminders,
 } from "@/lib/synergia-store";
 import { generateEvaluationPdf } from "@/lib/pdf-report";
 import { AthleteCarnet } from "@/components/AthleteCarnet";
+import { AttendanceControl } from "@/components/sistema/AttendanceControl";
 import { useDevice } from "@/components/DeviceContext";
 import { useI18n } from "@/components/I18nContext";
 
@@ -33,7 +36,8 @@ type CoachTab =
   | "contabilidad"
   | "morosos"
   | "solicitudes"
-  | "eventos";
+  | "eventos"
+  | "asistencia";
 
 interface CoachDashboardProps {
   state: SynergiaState;
@@ -51,6 +55,18 @@ export function CoachDashboard({
   const { deviceType, isMobile, isTablet } = useDevice();
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<CoachTab>("menu");
+
+  // Sincronización automática de recordatorios de pago los días 5, 10 y 15 de cada mes
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      const { nextState, sentCount } = syncScheduledPaymentReminders(state);
+      if (sentCount > 0) {
+        onStateChange(nextState);
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Cita & Formalización modals/inline state
   const [citaAppId, setCitaAppId] = useState<string | null>(null);
@@ -897,6 +913,30 @@ export function CoachDashboard({
                 </p>
               </div>
             </button>
+            {/* 9. CONTROL DE ASISTENCIA QR / CARNET (Wide Tile) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("asistencia")}
+              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-emerald-400/40 bg-gradient-to-r from-[#065F46] via-[#0F766E] to-[#4A1C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-[#4CE4D4] cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-emerald-200">
+                  {state.attendanceRecords.length} {t("registrada(s)", "recorded")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Control de Asistencia (QR y Carnet)", "Attendance Control (QR & ID Card)")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t("Escanear QR con cámara · Rechazo automático a morosos y suspendidos", "Scan QR with camera · Auto-reject overdue & suspended athletes")}
+                </p>
+              </div>
+            </button>
           </div>
         </section>
       ) : (
@@ -953,6 +993,11 @@ export function CoachDashboard({
                 key: "eventos",
                 label: t("Eventos", "Events"),
                 badge: state.events.length,
+              },
+              {
+                key: "asistencia",
+                label: t("Asistencia QR", "QR Attendance"),
+                badge: state.attendanceRecords.length,
               },
             ] as const
           ).map((tab) => (
@@ -1758,6 +1803,30 @@ export function CoachDashboard({
                 ))}
               </div>
             )}
+            {/* 9. CONTROL DE ASISTENCIA QR / CARNET (Wide Tile) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("asistencia")}
+              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-emerald-400/40 bg-gradient-to-r from-[#065F46] via-[#0F766E] to-[#4A1C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-[#4CE4D4] cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-emerald-200">
+                  {state.attendanceRecords.length} {t("registrada(s)", "recorded")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Control de Asistencia (QR y Carnet)", "Attendance Control (QR & ID Card)")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t("Escanear QR con cámara · Rechazo automático a morosos y suspendidos", "Scan QR with camera · Auto-reject overdue & suspended athletes")}
+                </p>
+              </div>
+            </button>
           </div>
         </section>
       )}
@@ -1779,16 +1848,45 @@ export function CoachDashboard({
             </div>
 
             {defaultersList.length > 0 && (
-              <button
-                type="button"
-                onClick={handleNotifyAllDefaulters}
-                className="rounded-xl bg-rose-500 px-4 py-2.5 text-xs font-bold text-white hover:bg-rose-400 cursor-pointer shrink-0"
-              >
-                {t(
-                  `Notificar a Todos (${defaultersList.length})`,
-                  `Notify All (${defaultersList.length})`
-                )}
-              </button>
+              <div className="flex flex-wrap gap-2 shrink-0">
+                {([5, 10, 15] as const).map((dayNum) => (
+                  <button
+                    key={dayNum}
+                    type="button"
+                    onClick={() => {
+                      const { nextState, sentCount } = syncScheduledPaymentReminders(
+                        state,
+                        dayNum
+                      );
+                      onStateChange(nextState);
+                      setNotifyFeedback(
+                        sentCount > 0
+                          ? t(
+                              `Se enviaron ${sentCount} recordatorio(s) programados del día ${dayNum}.`,
+                              `Sent ${sentCount} scheduled reminder(s) for day ${dayNum}.`
+                            )
+                          : t(
+                              `Los recordatorios del día ${dayNum} ya fueron enviados este mes.`,
+                              `Reminders for day ${dayNum} were already sent this month.`
+                            )
+                      );
+                    }}
+                    className="rounded-xl border border-amber-400/40 bg-amber-400/15 px-3 py-2 text-xs font-bold text-amber-200 hover:bg-amber-400/25 cursor-pointer"
+                  >
+                    {t(`Recordatorio Día ${dayNum}`, `Day ${dayNum} Reminder`)}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={handleNotifyAllDefaulters}
+                  className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white hover:bg-rose-400 cursor-pointer"
+                >
+                  {t(
+                    `Notificar a Todos (${defaultersList.length})`,
+                    `Notify All (${defaultersList.length})`
+                  )}
+                </button>
+              </div>
             )}
           </div>
 
@@ -1809,10 +1907,16 @@ export function CoachDashboard({
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {defaultersList.map((ath) => (
+              {defaultersList.map((ath) => {
+                const athPayStatus = getAthletePaymentStatus(state, ath);
+                return (
                 <div
                   key={ath.athleteId}
-                  className="rounded-2xl border border-rose-500/25 bg-[#0D1322] p-5 space-y-3"
+                  className={`rounded-2xl border bg-[#0D1322] p-5 space-y-3 ${
+                    athPayStatus.isSuspended
+                      ? "border-rose-500/60"
+                      : "border-rose-500/25"
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -1820,8 +1924,16 @@ export function CoachDashboard({
                       <p className="text-[11px] font-mono text-amber-300">{ath.athleteId}</p>
                       <p className="text-[11px] text-slate-400 mt-1">{ath.category}</p>
                     </div>
-                    <span className="rounded-full bg-rose-500/20 px-2.5 py-0.5 text-[10px] font-bold text-rose-300">
-                      {t("Moroso", "Overdue")}
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                        athPayStatus.isSuspended
+                          ? "bg-rose-600 text-white"
+                          : "bg-rose-500/20 text-rose-300"
+                      }`}
+                    >
+                      {athPayStatus.isSuspended
+                        ? t("SUSPENDIDO (2 meses)", "SUSPENDED (2 mos)")
+                        : t("Moroso", "Overdue")}
                     </span>
                   </div>
                   <p className="text-xs text-slate-300">
@@ -1835,7 +1947,8 @@ export function CoachDashboard({
                     {t("Enviar Notificación de Pago", "Send Payment Notification")}
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -2196,8 +2309,41 @@ export function CoachDashboard({
                 ))}
               </div>
             )}
+            {/* 9. CONTROL DE ASISTENCIA QR / CARNET (Wide Tile) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("asistencia")}
+              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-emerald-400/40 bg-gradient-to-r from-[#065F46] via-[#0F766E] to-[#4A1C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-[#4CE4D4] cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-emerald-200">
+                  {state.attendanceRecords.length} {t("registrada(s)", "recorded")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Control de Asistencia (QR y Carnet)", "Attendance Control (QR & ID Card)")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t("Escanear QR con cámara · Rechazo automático a morosos y suspendidos", "Scan QR with camera · Auto-reject overdue & suspended athletes")}
+                </p>
+              </div>
+            </button>
           </div>
         </section>
+      )}
+
+      {/* 9. CONTROL DE ASISTENCIA QR Y CARNET */}
+      {activeTab === "asistencia" && (
+        <AttendanceControl
+          state={state}
+          onStateChange={onStateChange}
+          recordedBy={currentUser?.username ?? "coach"}
+        />
       )}
 
       {/* MODAL FLOTANTE: Visor de Flyer (Entrenador, sin descarga) */}

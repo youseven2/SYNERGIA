@@ -130,9 +130,21 @@ export interface PaymentNotification {
   id: string;
   athleteId: string;
   monthKey: string;
+  dayTag?: string; // YYYY-MM-05 | YYYY-MM-10 | YYYY-MM-15
   message: string;
   createdAt: string;
   read: boolean;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  athleteId: string;
+  athleteName: string;
+  category: string;
+  timestamp: string;
+  dateKey: string; // YYYY-MM-DD
+  method: "qr" | "manual";
+  recordedBy: string;
 }
 
 export type MaterialType = "Uniforme" | "Zapatos" | "Lazos" | "Otro material";
@@ -190,6 +202,7 @@ export interface SynergiaState {
   materialRequests: MaterialRequest[];
   events: SynergiaEvent[];
   eventNotifications: EventNotification[];
+  attendanceRecords: AttendanceRecord[];
 }
 
 export const DEFAULT_EVENTS: SynergiaEvent[] = [
@@ -387,6 +400,7 @@ export function loadSynergiaState(): SynergiaState {
       materialRequests: [],
       events: DEFAULT_EVENTS,
       eventNotifications: [],
+      attendanceRecords: [],
     };
   }
   try {
@@ -403,6 +417,7 @@ export function loadSynergiaState(): SynergiaState {
         materialRequests: [],
         events: DEFAULT_EVENTS,
         eventNotifications: [],
+        attendanceRecords: [],
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
       return initial;
@@ -431,6 +446,9 @@ export function loadSynergiaState(): SynergiaState {
       eventNotifications: Array.isArray(parsed.eventNotifications)
         ? parsed.eventNotifications
         : [],
+      attendanceRecords: Array.isArray(parsed.attendanceRecords)
+        ? parsed.attendanceRecords
+        : [],
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
     return merged;
@@ -446,8 +464,130 @@ export function loadSynergiaState(): SynergiaState {
       materialRequests: [],
       events: DEFAULT_EVENTS,
       eventNotifications: [],
+      attendanceRecords: [],
     };
   }
+}
+
+export function getPreviousMonthKey(monthKey: string): string {
+  const [yStr, mStr] = monthKey.split("-");
+  const y = Number(yStr);
+  const m = Number(mStr);
+  if (m === 1) return `${y - 1}-12`;
+  return `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+
+export interface AthletePaymentStatusInfo {
+  currentMonth: string;
+  previousMonth: string;
+  paidCurrentMonth: boolean;
+  paidPreviousMonth: boolean;
+  consecutiveUnpaidMonths: number;
+  isOverdue: boolean;
+  isSuspended: boolean;
+}
+
+export function getAthletePaymentStatus(
+  state: SynergiaState,
+  athlete: AthleteProfile,
+  referenceDate: Date = new Date()
+): AthletePaymentStatusInfo {
+  const y = referenceDate.getFullYear();
+  const m = String(referenceDate.getMonth() + 1).padStart(2, "0");
+  const currentMonth = `${y}-${m}`;
+  const previousMonth = getPreviousMonthKey(currentMonth);
+  const fee = state.monthlyFee || 30;
+
+  const approvedFor = (mk: string) =>
+    state.payments
+      .filter(
+        (p) =>
+          p.athleteId === athlete.athleteId &&
+          p.monthKey === mk &&
+          p.status === "aprobado"
+      )
+      .reduce((sum, p) => sum + p.amount, 0);
+
+  const paidCurrentMonth = approvedFor(currentMonth) >= fee;
+  const paidPreviousMonth = approvedFor(previousMonth) >= fee;
+
+  const formalizedMonth = athlete.formalizedAt
+    ? athlete.formalizedAt.slice(0, 7)
+    : currentMonth;
+
+  let consecutiveUnpaidMonths = 0;
+  let isSuspended = false;
+
+  if (!paidCurrentMonth && !paidPreviousMonth && formalizedMonth <= previousMonth) {
+    consecutiveUnpaidMonths = 2;
+    isSuspended = true;
+  } else if (!paidCurrentMonth) {
+    consecutiveUnpaidMonths = 1;
+  }
+
+  return {
+    currentMonth,
+    previousMonth,
+    paidCurrentMonth,
+    paidPreviousMonth,
+    consecutiveUnpaidMonths,
+    isOverdue: !paidCurrentMonth || isSuspended,
+    isSuspended,
+  };
+}
+
+export function syncScheduledPaymentReminders(
+  state: SynergiaState,
+  forceDay?: 5 | 10 | 15
+): { nextState: SynergiaState; sentCount: number; reminderDay: number | null } {
+  const now = new Date();
+  const dayOfMonth = forceDay ?? now.getDate();
+  if (dayOfMonth !== 5 && dayOfMonth !== 10 && dayOfMonth !== 15) {
+    return { nextState: state, sentCount: 0, reminderDay: null };
+  }
+
+  const currentMonth = getCurrentMonthKey();
+  const dayTag = `${currentMonth}-${String(dayOfMonth).padStart(2, "0")}`;
+  const newNotifs: PaymentNotification[] = [];
+
+  for (const ath of state.athletes) {
+    const status = getAthletePaymentStatus(state, ath, now);
+    if (!status.isOverdue) continue;
+
+    const alreadySent = state.paymentNotifications.some(
+      (n) => n.athleteId === ath.athleteId && n.dayTag === dayTag
+    );
+    if (alreadySent) continue;
+
+    const message = status.isSuspended
+      ? `SUSPENSIÓN DE PRÁCTICAS (${dayTag}): Acumulas 2 meses consecutivos sin pago (${status.previousMonth} y ${status.currentMonth}). Debes cancelar la totalidad de tu mora para reactivar tu asistencia.`
+      : `Recordatorio de Pago (Día ${dayOfMonth} · ${currentMonth}): Tu mensualidad vence el 15 de este mes. Registra tu pago en el Módulo de Pagos para evitar mora o suspensión.`;
+
+    newNotifs.push({
+      id: createRecordId(`rem-${ath.athleteId}`),
+      athleteId: ath.athleteId,
+      monthKey: currentMonth,
+      dayTag,
+      message,
+      createdAt: now.toISOString(),
+      read: false,
+    });
+  }
+
+  if (newNotifs.length === 0) {
+    return { nextState: state, sentCount: 0, reminderDay: dayOfMonth };
+  }
+
+  const nextState: SynergiaState = {
+    ...state,
+    paymentNotifications: [...newNotifs, ...state.paymentNotifications],
+  };
+  saveSynergiaState(nextState);
+  return {
+    nextState,
+    sentCount: newNotifs.length,
+    reminderDay: dayOfMonth,
+  };
 }
 
 export function saveSynergiaState(state: SynergiaState): void {
