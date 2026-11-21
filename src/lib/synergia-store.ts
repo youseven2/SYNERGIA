@@ -151,6 +151,17 @@ export interface MaterialRequest {
   createdAt: string;
 }
 
+export interface SynergiaEvent {
+  id: string;
+  date: string; // YYYY-MM-DD
+  title: string;
+  time: string;
+  location: string;
+  description: string;
+  category: string;
+  flyerDataUrl?: string;
+}
+
 export interface SynergiaState {
   applications: RegistrationApplication[];
   forms: EvaluationFormTemplate[];
@@ -160,7 +171,38 @@ export interface SynergiaState {
   payments: AthletePayment[];
   paymentNotifications: PaymentNotification[];
   materialRequests: MaterialRequest[];
+  events: SynergiaEvent[];
 }
+
+export const DEFAULT_EVENTS: SynergiaEvent[] = [
+  {
+    id: "ev-1",
+    date: "2026-11-28",
+    title: "Copa Nacional All Star · Exhibición de Rutinas",
+    time: "09:00 am – 04:00 pm",
+    location: "Los Dos Caminos, Av. El Centro",
+    description: "Presentación oficial de rutinas All Star ante jueces y familiares.",
+    category: "Competencia",
+  },
+  {
+    id: "ev-2",
+    date: "2026-12-05",
+    title: "Evaluación de Ingreso · Nuevos Aspirantes",
+    time: "10:00 am – 01:00 pm",
+    location: "Los Dos Caminos / Bellas Artes",
+    description: "Jornada de evaluación física y técnica para nuevos ingresos.",
+    category: "Evaluación",
+  },
+  {
+    id: "ev-3",
+    date: "2026-12-12",
+    title: "Gala Navideña SYNERGIA ALL STARS",
+    time: "03:00 pm – 06:30 pm",
+    location: "Bellas Artes, Galería de Arte Nacional",
+    description: "Exhibición especial de cierre de año con todas las categorías.",
+    category: "Evento Especial",
+  },
+];
 
 export const CHEER_CATEGORIES = [
   "MINI ROYALTY (4 a 7 años · Los Dos Caminos)",
@@ -325,6 +367,7 @@ export function loadSynergiaState(): SynergiaState {
       payments: [],
       paymentNotifications: [],
       materialRequests: [],
+      events: DEFAULT_EVENTS,
     };
   }
   try {
@@ -339,6 +382,7 @@ export function loadSynergiaState(): SynergiaState {
         payments: [],
         paymentNotifications: [],
         materialRequests: [],
+        events: DEFAULT_EVENTS,
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
       return initial;
@@ -363,6 +407,7 @@ export function loadSynergiaState(): SynergiaState {
       materialRequests: Array.isArray(parsed.materialRequests)
         ? parsed.materialRequests
         : [],
+      events: Array.isArray(parsed.events) ? parsed.events : DEFAULT_EVENTS,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
     return merged;
@@ -376,6 +421,7 @@ export function loadSynergiaState(): SynergiaState {
       payments: [],
       paymentNotifications: [],
       materialRequests: [],
+      events: DEFAULT_EVENTS,
     };
   }
 }

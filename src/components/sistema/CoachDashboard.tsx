@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { ChangeEvent, useState, FormEvent } from "react";
 import {
   ActivityScore,
   AthleteProfile,
@@ -10,6 +10,7 @@ import {
   EvaluationFormTemplate,
   RegistrationApplication,
   RequestStatus,
+  SynergiaEvent,
   SynergiaState,
   SystemUser,
   createRecordId,
@@ -31,7 +32,8 @@ type CoachTab =
   | "perfil"
   | "contabilidad"
   | "morosos"
-  | "solicitudes";
+  | "solicitudes"
+  | "eventos";
 
 interface CoachDashboardProps {
   state: SynergiaState;
@@ -93,6 +95,20 @@ export function CoachDashboard({
   const [accountingMonth, setAccountingMonth] = useState(getCurrentMonthKey());
   const [feeInput, setFeeInput] = useState(String(state.monthlyFee || 30));
   const [notifyFeedback, setNotifyFeedback] = useState<string | null>(null);
+
+  // Eventos state (solo entrenadores)
+  const [evTitle, setEvTitle] = useState("");
+  const [evDate, setEvDate] = useState("");
+  const [evTime, setEvTime] = useState("");
+  const [evLocation, setEvLocation] = useState("Los Dos Caminos, Av. El Centro");
+  const [evCategory, setEvCategory] = useState("Competencia");
+  const [evDescription, setEvDescription] = useState("");
+  const [evFlyerDataUrl, setEvFlyerDataUrl] = useState("");
+  const [evSavedMsg, setEvSavedMsg] = useState<string | null>(null);
+  const [coachFlyerModal, setCoachFlyerModal] = useState<{
+    title: string;
+    url: string;
+  } | null>(null);
 
   const newApplicantsCount = state.applications.filter(
     (a) => a.status === "nuevo"
@@ -474,6 +490,60 @@ export function CoachDashboard({
     commitState({ ...state, materialRequests: updated });
   }
 
+  // --- EVENTOS (SOLO ENTRENADORES) ---
+  function handleEvFlyerUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setEvFlyerDataUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleAddEvent(e: FormEvent) {
+    e.preventDefault();
+    setEvSavedMsg(null);
+    if (!evTitle.trim() || !evDate) return;
+
+    const newEv: SynergiaEvent = {
+      id: createRecordId("ev"),
+      date: evDate,
+      title: evTitle.trim(),
+      time: evTime.trim() || "Por definir",
+      location: evLocation.trim() || "Sede Principal",
+      description: evDescription.trim(),
+      category: evCategory.trim() || "Evento",
+      flyerDataUrl: evFlyerDataUrl || undefined,
+    };
+
+    commitState({
+      ...state,
+      events: [newEv, ...state.events],
+    });
+
+    setEvTitle("");
+    setEvDate("");
+    setEvTime("");
+    setEvDescription("");
+    setEvFlyerDataUrl("");
+    setEvSavedMsg(
+      t(
+        "Evento publicado en el calendario público correctamente.",
+        "Event published to the public calendar successfully."
+      )
+    );
+  }
+
+  function handleDeleteEvent(eventId: string) {
+    commitState({
+      ...state,
+      events: state.events.filter((ev) => ev.id !== eventId),
+    });
+  }
+
   const deviceLabel =
     deviceType === "mobile"
       ? t("Celular", "Mobile")
@@ -730,7 +800,7 @@ export function CoachDashboard({
             <button
               type="button"
               onClick={() => setActiveTab("solicitudes")}
-              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-amber-400/35 bg-gradient-to-r from-[#7E3D97]/90 via-[#381B4C] to-[#0F4C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-amber-300 cursor-pointer"
+              className="col-span-2 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-amber-400/35 bg-gradient-to-r from-[#7E3D97]/90 via-[#381B4C] to-[#0F4C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.015] hover:border-amber-300 cursor-pointer"
             >
               <div className="flex items-start justify-between">
                 <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -746,6 +816,30 @@ export function CoachDashboard({
                 </p>
                 <p className="text-[11px] text-slate-200/85">
                   {t("Uniformes, zapatos, lazos y materiales de entrenamiento", "Uniforms, shoes, bows & training materials")}
+                </p>
+              </div>
+            </button>
+
+            {/* 8. EVENTOS DEL CALENDARIO PÚBLICO (Wide Tile) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("eventos")}
+              className="col-span-2 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-[#4CE4D4]/35 bg-gradient-to-r from-[#0F4C5C] via-[#0D3B4C] to-[#7E3D97]/85 p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.015] hover:border-[#4CE4D4] cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-[#4CE4D4]">
+                  {state.events.length} {t("publicado(s)", "published")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Configurar Eventos", "Manage Events")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t("Calendario público, día, hora, descripción y flyers", "Public calendar, date, time, description & flyers")}
                 </p>
               </div>
             </button>
@@ -800,6 +894,11 @@ export function CoachDashboard({
                 key: "solicitudes",
                 label: t("Solicitudes de Atletas", "Athlete Requests"),
                 badge: pendingRequestsCount,
+              },
+              {
+                key: "eventos",
+                label: t("Eventos", "Events"),
+                badge: state.events.length,
               },
             ] as const
           ).map((tab) => (
@@ -1762,6 +1861,244 @@ export function CoachDashboard({
             </div>
           )}
         </section>
+      )}
+
+      {/* 8. EVENTOS DEL CALENDARIO PÚBLICO (SOLO ENTRENADORES) */}
+      {activeTab === "eventos" && (
+        <section className="grid gap-6 lg:grid-cols-2">
+          <form
+            onSubmit={handleAddEvent}
+            className="rounded-3xl border border-white/10 bg-[#0D1322] p-6 space-y-4"
+          >
+            <div>
+              <h2 className="text-lg font-bold text-white">
+                {t("Agregar Nuevo Evento", "Add New Event")}
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                {t(
+                  "Los eventos creados aquí se muestran automáticamente en el calendario público de la página.",
+                  "Events created here appear automatically on the public website calendar."
+                )}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-200">
+                {t("Título del Evento *", "Event Title *")}
+              </label>
+              <input
+                type="text"
+                required
+                value={evTitle}
+                onChange={(e) => setEvTitle(e.target.value)}
+                placeholder={t("Ej. Campeonato Regional All Star", "E.g. Regional All Star Championship")}
+                className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-semibold text-slate-200">
+                  {t("Día del Evento *", "Event Date *")}
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={evDate}
+                  onChange={(e) => setEvDate(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white [color-scheme:dark] focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-200">
+                  {t("Hora *", "Time *")}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={evTime}
+                  onChange={(e) => setEvTime(e.target.value)}
+                  placeholder="Ej. 09:00 am – 04:00 pm"
+                  className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-semibold text-slate-200">
+                  {t("Sede / Lugar", "Location")}
+                </label>
+                <input
+                  type="text"
+                  value={evLocation}
+                  onChange={(e) => setEvLocation(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-200">
+                  {t("Categoría", "Category")}
+                </label>
+                <input
+                  type="text"
+                  value={evCategory}
+                  onChange={(e) => setEvCategory(e.target.value)}
+                  placeholder="Competencia / Evaluación / Gala"
+                  className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-200">
+                {t("Descripción del Evento", "Event Description")}
+              </label>
+              <textarea
+                rows={3}
+                value={evDescription}
+                onChange={(e) => setEvDescription(e.target.value)}
+                placeholder={t("Detalles, indicaciones o requisitos del evento...", "Event details, notes or requirements...")}
+                className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
+              />
+            </div>
+
+            <div className="rounded-2xl border border-[#9D5BB8]/35 bg-[#7E3D97]/10 p-4 space-y-2">
+              <label className="block text-xs font-bold text-purple-200">
+                {t("Flyer del Evento (Opcional · Se visualiza en ventana flotante)", "Event Flyer (Optional · Viewed in floating modal)")}
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleEvFlyerUpload}
+                className="block w-full text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-[#7E3D97]/40 file:px-3 file:py-2 file:text-xs file:font-bold file:text-purple-100"
+              />
+              {evFlyerDataUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={evFlyerDataUrl}
+                  alt="Vista previa flyer"
+                  className="mt-2 h-32 w-auto rounded-xl border border-white/15 object-contain"
+                />
+              )}
+            </div>
+
+            {evSavedMsg && (
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-200">
+                {evSavedMsg}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full rounded-xl bg-[#00B7A4] py-3 text-sm font-bold text-slate-950 hover:bg-[#14CEBA] cursor-pointer"
+            >
+              {t("Guardar y Publicar Evento", "Save & Publish Event")}
+            </button>
+          </form>
+
+          {/* Lista de eventos ya configurados (para visualizar flyer o eliminar) */}
+          <div className="rounded-3xl border border-white/10 bg-[#0D1322] p-6 space-y-4">
+            <h2 className="text-lg font-bold text-white">
+              {t("Eventos Configurados", "Configured Events")} ({state.events.length})
+            </h2>
+
+            {state.events.length === 0 ? (
+              <p className="py-8 text-center text-xs text-slate-400">
+                {t("No hay eventos configurados.", "No events configured.")}
+              </p>
+            ) : (
+              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                {state.events.map((ev) => (
+                  <div
+                    key={ev.id}
+                    className="rounded-2xl border border-white/10 bg-[#070B14]/85 p-4 text-xs space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="font-mono font-bold text-amber-300">
+                          {ev.date}
+                        </span>
+                        <span className="ml-2 rounded-full bg-[#7E3D97]/30 px-2 py-0.5 text-[10px] font-bold text-purple-200">
+                          {ev.category}
+                        </span>
+                        <h3 className="mt-1 text-sm font-bold text-white">
+                          {ev.title}
+                        </h3>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteEvent(ev.id)}
+                        className="shrink-0 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-[11px] font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                      >
+                        {t("Eliminar", "Delete")}
+                      </button>
+                    </div>
+
+                    <p className="text-slate-300">
+                      {ev.time} · {ev.location}
+                    </p>
+                    {ev.description && (
+                      <p className="text-slate-400">{ev.description}</p>
+                    )}
+
+                    {ev.flyerDataUrl && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCoachFlyerModal({
+                            title: ev.title,
+                            url: ev.flyerDataUrl!,
+                          })
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#9D5BB8]/50 bg-[#7E3D97]/25 px-3 py-1.5 text-[11px] font-bold text-purple-100 hover:bg-[#7E3D97]/45 cursor-pointer"
+                      >
+                        {t("Ver Flyer en Ventana", "View Flyer")}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* MODAL FLOTANTE: Visor de Flyer (Entrenador, sin descarga) */}
+      {coachFlyerModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
+          onClick={() => setCoachFlyerModal(null)}
+        >
+          <div
+            className="w-full max-w-2xl overflow-hidden rounded-[24px] border border-white/15 bg-[#0B1120] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-3.5">
+              <p className="truncate text-sm font-bold text-white">
+                {coachFlyerModal.title}
+              </p>
+              <button
+                type="button"
+                onClick={() => setCoachFlyerModal(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs text-white hover:bg-white/20 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex items-center justify-center bg-[#070B14] p-4 max-h-[78vh] overflow-auto">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coachFlyerModal.url}
+                alt={coachFlyerModal.title}
+                className="max-h-[70vh] w-auto rounded-xl object-contain"
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* MODAL: Asignar Cita y Formulario */}

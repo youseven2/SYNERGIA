@@ -5,7 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/I18nContext";
 import { useDevice } from "@/components/DeviceContext";
-import { loadSynergiaState } from "@/lib/synergia-store";
+import {
+  DEFAULT_EVENTS,
+  SynergiaEvent,
+  loadSynergiaState,
+} from "@/lib/synergia-store";
 
 interface SearchResultItem {
   id: string;
@@ -14,55 +18,6 @@ interface SearchResultItem {
   href: string;
   category: string;
 }
-
-interface SynergiaEvent {
-  id: string;
-  date: string; // YYYY-MM-DD
-  titleEs: string;
-  titleEn: string;
-  time: string;
-  location: string;
-  category: string;
-}
-
-const SYNERGIA_EVENTS: SynergiaEvent[] = [
-  {
-    id: "ev-1",
-    date: "2026-11-28",
-    titleEs: "Copa Nacional All Star · Exhibición de Rutinas",
-    titleEn: "All Star National Cup · Routine Showcase",
-    time: "09:00 am – 04:00 pm",
-    location: "Los Dos Caminos, Av. El Centro",
-    category: "Competencia",
-  },
-  {
-    id: "ev-2",
-    date: "2026-12-05",
-    titleEs: "Evaluación de Ingreso · Nuevos Aspirantes",
-    titleEn: "Tryouts & Evaluation · New Applicants",
-    time: "10:00 am – 01:00 pm",
-    location: "Los Dos Caminos / Bellas Artes",
-    category: "Evaluación",
-  },
-  {
-    id: "ev-3",
-    date: "2026-12-12",
-    titleEs: "Gala Navideña SYNERGIA ALL STARS",
-    titleEn: "SYNERGIA ALL STARS Holiday Gala",
-    time: "03:00 pm – 06:30 pm",
-    location: "Bellas Artes, Galería de Arte Nacional",
-    category: "Evento Especial",
-  },
-  {
-    id: "ev-4",
-    date: "2027-01-16",
-    titleEs: "Inicio de Temporada Formativa 2027",
-    titleEn: "2027 Formative Season Kickoff",
-    time: "09:30 am – 03:30 pm",
-    location: "Ambas Sedes",
-    category: "Temporada",
-  },
-];
 
 const MONTHS_ES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -80,6 +35,11 @@ export function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [eventsOpen, setEventsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [eventsList, setEventsList] = useState<SynergiaEvent[]>(DEFAULT_EVENTS);
+  const [activeFlyer, setActiveFlyer] = useState<{
+    title: string;
+    url: string;
+  } | null>(null);
   const [calYear, setCalYear] = useState(2026);
   const [calMonth, setCalMonth] = useState(10); // Noviembre (0-indexed)
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -89,19 +49,31 @@ export function Navbar() {
   const router = useRouter();
 
   useEffect(() => {
+    if (!eventsOpen) return;
+    const raf = requestAnimationFrame(() => {
+      setEventsList(loadSynergiaState().events);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [eventsOpen]);
+
+  useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setSearchOpen((prev) => !prev);
       } else if (e.key === "Escape") {
-        setSearchOpen(false);
-        setEventsOpen(false);
-        setAboutOpen(false);
+        if (activeFlyer) {
+          setActiveFlyer(null);
+        } else {
+          setSearchOpen(false);
+          setEventsOpen(false);
+          setAboutOpen(false);
+        }
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [activeFlyer]);
 
   const searchResults = useMemo<SearchResultItem[]>(() => {
     const baseItems: SearchResultItem[] = [
@@ -608,7 +580,7 @@ export function Navbar() {
                     }
                     for (let day = 1; day <= daysInMonth; day++) {
                       const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                      const dayEvents = SYNERGIA_EVENTS.filter((e) => e.date === dateStr);
+                      const dayEvents = eventsList.filter((e) => e.date === dateStr);
                       const hasEvents = dayEvents.length > 0;
                       const isSelected = selectedDay === dateStr;
                       cells.push(
@@ -662,8 +634,8 @@ export function Navbar() {
                 {(() => {
                   const monthPrefix = `${calYear}-${String(calMonth + 1).padStart(2, "0")}`;
                   const visibleEvents = selectedDay
-                    ? SYNERGIA_EVENTS.filter((e) => e.date === selectedDay)
-                    : SYNERGIA_EVENTS.filter((e) => e.date.startsWith(monthPrefix));
+                    ? eventsList.filter((e) => e.date === selectedDay)
+                    : eventsList.filter((e) => e.date.startsWith(monthPrefix));
 
                   if (visibleEvents.length === 0) {
                     return (
@@ -677,11 +649,11 @@ export function Navbar() {
                   }
 
                   return (
-                    <div className="space-y-2.5">
+                    <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
                       {visibleEvents.map((ev) => (
                         <div
                           key={ev.id}
-                          className="rounded-2xl border border-[#00B7A4]/30 bg-[#070B14] p-3.5 text-xs space-y-1"
+                          className="rounded-2xl border border-[#00B7A4]/30 bg-[#070B14] p-3.5 text-xs space-y-1.5"
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-mono font-bold text-amber-300">
@@ -692,10 +664,31 @@ export function Navbar() {
                             </span>
                           </div>
                           <p className="text-sm font-bold text-white">
-                            {lang === "en" ? ev.titleEn : ev.titleEs}
+                            {ev.title}
                           </p>
                           <p className="text-slate-300">{ev.time}</p>
-                          <p className="text-[#4CE4D4]">{ev.location}</p>
+                          {ev.location && (
+                            <p className="text-[#4CE4D4]">{ev.location}</p>
+                          )}
+                          {ev.description && (
+                            <p className="text-slate-400 leading-relaxed">
+                              {ev.description}
+                            </p>
+                          )}
+                          {ev.flyerDataUrl && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveFlyer({
+                                  title: ev.title,
+                                  url: ev.flyerDataUrl!,
+                                })
+                              }
+                              className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-[#9D5BB8]/50 bg-[#7E3D97]/25 px-3 py-1.5 text-[11px] font-bold text-purple-100 hover:bg-[#7E3D97]/45 cursor-pointer"
+                            >
+                              {t("Ver Flyer", "View Flyer")}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -760,6 +753,41 @@ export function Navbar() {
                   )}
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ventana Flotante: Visor de Flyer del Evento (sin descarga) */}
+      {activeFlyer && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4 backdrop-blur-md print:hidden"
+          onClick={() => setActiveFlyer(null)}
+        >
+          <div
+            className="w-full max-w-2xl overflow-hidden rounded-[24px] border border-white/15 bg-[#0B1120] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-3.5">
+              <p className="truncate text-sm font-bold text-white">
+                {activeFlyer.title}
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveFlyer(null)}
+                aria-label={t("Cerrar", "Close")}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs text-white hover:bg-white/20 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex items-center justify-center bg-[#070B14] p-4 max-h-[78vh] overflow-auto">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={activeFlyer.url}
+                alt={activeFlyer.title}
+                className="max-h-[70vh] w-auto rounded-xl object-contain"
+              />
             </div>
           </div>
         </div>
