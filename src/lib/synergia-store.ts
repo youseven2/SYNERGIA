@@ -163,12 +163,12 @@ export interface SynergiaState {
 }
 
 export const CHEER_CATEGORIES = [
-  "Tiny & Mini All Stars (Nivel 1)",
-  "Youth Cheer (Nivel 1 – 2)",
-  "Junior All Stars (Nivel 2 – 3)",
-  "Senior All Girl (Nivel 3 – 4)",
-  "Senior & Open Coed (Nivel 3 – 5)",
-  "Academia de Tumbling & Stunts",
+  "MINI ROYALTY (4 a 7 años · Los Dos Caminos)",
+  "GLOW FIRE (5 a 10 años · Los Dos Caminos)",
+  "STAR BLITZ (8 a 15 años · Los Dos Caminos)",
+  "MINI TITANS (4 a 7 años · Bellas Artes)",
+  "NOVA LEGACY (7 a 13 años · Bellas Artes)",
+  "STARFIRE (8 a 15 años · Bellas Artes)",
 ];
 
 export const CHEER_POSITIONS = [
