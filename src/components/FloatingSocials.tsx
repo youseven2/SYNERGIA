@@ -29,6 +29,7 @@ export function FloatingSocials() {
   const { isMobile } = useDevice();
   const { t } = useI18n();
   const [waOpen, setWaOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const containerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -41,7 +42,10 @@ export function FloatingSocials() {
       }
     }
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setWaOpen(false);
+      if (e.key === "Escape") {
+        setWaOpen(false);
+        setMapOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     window.addEventListener("keydown", handleKeyDown);
@@ -55,11 +59,12 @@ export function FloatingSocials() {
   const iconSize = "h-5 w-5";
 
   return (
-    <aside
-      ref={containerRef}
-      aria-label={t("Redes Sociales", "Social Media")}
-      className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-3 print:hidden"
-    >
+    <>
+      <aside
+        ref={containerRef}
+        aria-label={t("Redes Sociales y Ubicación", "Social Media & Location")}
+        className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-3 print:hidden"
+      >
       {/* Ventana moderna y redondeada de WhatsApp */}
       {waOpen && (
         <div className="mb-1 w-[290px] sm:w-[310px] overflow-hidden rounded-[28px] border border-white/15 bg-[#0B1120]/95 shadow-[0_24px_60px_rgba(0,0,0,0.65)] backdrop-blur-xl transition-all">
@@ -130,6 +135,31 @@ export function FloatingSocials() {
         </div>
       )}
 
+      {/* Ubicación (Mapa + Video) */}
+      <button
+        type="button"
+        onClick={() => {
+          setWaOpen(false);
+          setMapOpen(true);
+        }}
+        title={t("Nuestra Ubicación y Cómo Llegar", "Our Location & How to Get Here")}
+        aria-label={t("Ubicación", "Location")}
+        className={`group flex ${btnSize} items-center justify-center rounded-full border border-[#9D5BB8]/60 bg-gradient-to-br from-[#00B7A4] to-[#7E3D97] text-white shadow-lg shadow-[#7E3D97]/30 transition-all duration-200 hover:scale-110 hover:shadow-[#00B7A4]/45 cursor-pointer`}
+      >
+        <svg
+          className={iconSize}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.1}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+      </button>
+
       {/* Instagram */}
       <a
         href="https://www.instagram.com/synergia_allstars?gwpx=MXdmYXNxYmVta2xmcQ=="
@@ -168,5 +198,87 @@ export function FloatingSocials() {
         </svg>
       </button>
     </aside>
+
+    {/* Ventana flotante centrada de Ubicación (Google Maps + Video) */}
+    {mapOpen && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-6 backdrop-blur-md print:hidden"
+        onClick={() => setMapOpen(false)}
+      >
+        <div
+          className="w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-[28px] border border-white/15 bg-[#0B1120] shadow-[0_28px_80px_rgba(0,0,0,0.8)]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-r from-[#00B7A4]/20 via-[#0D1628] to-[#7E3D97]/25 px-5 py-4 sm:px-7">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#4CE4D4]">
+                {t("Sede Principal · SYNERGIA ALL STARS", "Main Headquarters · SYNERGIA ALL STARS")}
+              </span>
+              <h2 className="mt-0.5 text-lg sm:text-xl font-extrabold text-white">
+                {t("Ubicación y Video de Cómo Llegar", "Location & Directions Video")}
+              </h2>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Los Dos Caminos, Av. El Centro, Caracas 1071, Miranda
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0">
+              <a
+                href="https://maps.app.goo.gl/CJdCAN3NnCqsErXAA?g_st=aw"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#00B7A4] px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-[#14CEBA] transition-colors"
+              >
+                {t("Abrir en Google Maps", "Open in Google Maps")} ↗
+              </a>
+              <button
+                type="button"
+                onClick={() => setMapOpen(false)}
+                aria-label={t("Cerrar", "Close")}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10 text-sm text-white hover:bg-white/20 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-2">
+            {/* Mapa Google Maps */}
+            <div className="flex flex-col space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                {t("Mapa de Ubicación", "Location Map")}
+              </span>
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#070B14] h-[260px] sm:h-[340px] lg:h-[400px]">
+                <iframe
+                  title="Mapa Sede Principal SYNERGIA ALL STARS"
+                  src="https://maps.google.com/maps?q=Sede+Principal+Club+De+Porrismo+Synergia+All+Stars+Los+Dos+Caminos,+Av+El+Centro,+Caracas+1071,+Miranda&z=16&output=embed"
+                  className="h-full w-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+
+            {/* Video Referencial de Cómo Llegar */}
+            <div className="flex flex-col space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-purple-200">
+                {t("Video Referencial de Cómo Llegar", "Directions Reference Video")}
+              </span>
+              <div className="overflow-hidden rounded-2xl border border-[#9D5BB8]/35 bg-[#070B14] h-[260px] sm:h-[340px] lg:h-[400px] flex items-center justify-center">
+                <video
+                  src="/como-llegar.mp4"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
