@@ -120,7 +120,7 @@ export function Navbar() {
       },
       {
         id: "mod-sistema",
-        title: t("Ingresar al Sistema", "System Login"),
+        title: t("SISTEMA", "SYSTEM"),
         subtitle: t(
           "Acceso para Administradores, Entrenadores y Atletas",
           "Access for Administrators, Coaches & Athletes"
@@ -283,7 +283,7 @@ export function Navbar() {
                 href="/sistema"
                 className="rounded-lg bg-[#00B7A4] px-3.5 py-2 text-xs lg:text-sm font-bold text-slate-950 shadow-lg shadow-[#00B7A4]/25 hover:bg-[#14CEBA] transition-all"
               >
-                {t("Ingresar al Sistema", "System Login")}
+                {t("SISTEMA", "SYSTEM")}
               </Link>
             </div>
 
@@ -374,7 +374,7 @@ export function Navbar() {
                 onClick={() => setMenuOpen(false)}
                 className="w-full text-center rounded-lg bg-[#00B7A4] px-4 py-2.5 text-sm font-bold text-slate-950"
               >
-                {t("Ingresar al Sistema", "System Login")}
+                {t("SISTEMA", "SYSTEM")}
               </Link>
             </div>
           </div>
