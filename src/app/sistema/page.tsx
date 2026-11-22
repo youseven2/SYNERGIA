@@ -43,9 +43,10 @@ export default function SistemaPage() {
   function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoginError(null);
-    if (!state) return;
 
-    if (!username.trim() || !password.trim()) {
+    const cleanUser = username.trim().toLowerCase();
+    const cleanPass = password.trim();
+    if (!cleanUser || !cleanPass) {
       setLoginError(
         t(
           "Ingresa tu usuario y contraseña.",
@@ -55,11 +56,14 @@ export default function SistemaPage() {
       return;
     }
 
+    const freshState = loadSynergiaState();
+    setState(freshState);
+
     // 1. Detectar automáticamente si corresponde a Entrenador / Administrador
     const authenticatedSystemUser = authenticateSystemUser(
-      state,
-      username,
-      password
+      freshState,
+      cleanUser,
+      cleanPass
     );
     if (authenticatedSystemUser) {
       setSession({ type: "coach", user: authenticatedSystemUser });
@@ -67,10 +71,10 @@ export default function SistemaPage() {
     }
 
     // 2. Detectar automáticamente si corresponde a un Atleta formalizado
-    const foundAthlete = state.athletes.find(
+    const foundAthlete = freshState.athletes.find(
       (a) =>
-        a.username.toLowerCase() === username.trim().toLowerCase() &&
-        a.password === password
+        a.username.trim().toLowerCase() === cleanUser &&
+        a.password.trim() === cleanPass
     );
     if (foundAthlete) {
       setSession({ type: "athlete", athleteId: foundAthlete.athleteId });

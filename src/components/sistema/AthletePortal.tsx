@@ -27,7 +27,13 @@ interface AthletePortalProps {
   onLogout: () => void;
 }
 
-type AthleteTab = "perfil" | "pagos" | "solicitudes" | "asistencia";
+type AthleteTab =
+  | "perfil"
+  | "carnet"
+  | "pagos"
+  | "solicitudes"
+  | "agenda"
+  | "asistencia";
 
 const BLOOD_TYPES = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
 const MATERIAL_TYPES: MaterialType[] = [
@@ -47,6 +53,10 @@ export function AthletePortal({
   const { isMobile } = useDevice();
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<AthleteTab>("perfil");
+  const [athleteFlyerModal, setAthleteFlyerModal] = useState<{
+    title: string;
+    url: string;
+  } | null>(null);
 
   // Cambio de clave obligatorio si tiene clave provisional
   const [newPass, setNewPass] = useState("");
@@ -560,63 +570,153 @@ export function AthletePortal({
         ) : null;
       })()}
 
-      <div
-        className={`gap-3 ${
-          isMobile ? "grid grid-cols-1" : "grid grid-cols-2 lg:grid-cols-4"
-        }`}
-      >
-        {(
-          [
-            {
-              key: "perfil",
-              title: t("Mi Perfil y Carnet", "My Profile & ID Card"),
-              subtitle: t("Ficha médica, foto y QR", "Medical sheet, photo & QR"),
-              badge: 0,
-            },
-            {
-              key: "asistencia",
-              title: t("Control de Asistencia", "Attendance Control"),
-              subtitle: t("Validar QR o ID de carnet", "Validate QR or ID card"),
-              badge: 0,
-            },
-            {
-              key: "pagos",
-              title: t("Módulo de Pagos", "Payments Module"),
-              subtitle: t("Transferencia, Pago Móvil, Efectivo", "Transfer, Mobile Pay, Cash"),
-              badge: unreadNotifs.length,
-            },
-            {
-              key: "solicitudes",
-              title: t("Solicitudes de Materiales", "Material Requests"),
-              subtitle: t("Uniformes, zapatos, lazos", "Uniforms, shoes, bows"),
-              badge: myRequests.filter((r) => r.status === "pendiente").length,
-            },
-          ] as const
-        ).map((mod) => (
-          <button
-            key={mod.key}
-            type="button"
-            onClick={() => setActiveTab(mod.key)}
-            className={`flex items-center justify-between gap-3 rounded-2xl border p-4 text-left transition-all cursor-pointer ${
-              activeTab === mod.key
-                ? "border-[#00B7A4] bg-[#00B7A4]/15 shadow-lg shadow-[#00B7A4]/10"
-                : "border-white/10 bg-[#0D1322] hover:border-[#9D5BB8]/50 hover:bg-[#131B2E]"
-            }`}
-          >
-            <div>
-              <p className="text-sm font-extrabold text-white">{mod.title}</p>
-              <p className="mt-0.5 text-[11px] text-slate-400">{mod.subtitle}</p>
-            </div>
-            {mod.badge > 0 && (
-              <span className="rounded-full bg-amber-400/20 px-2.5 py-0.5 text-xs font-extrabold text-amber-300 border border-amber-400/30">
-                {mod.badge}
-              </span>
+      {!athlete.profileCompleted ? (
+        <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-xs text-amber-100">
+          <p className="text-sm font-extrabold text-amber-300">
+            {t(
+              "Paso Obligatorio: Formaliza tu Inscripción por Primera Vez",
+              "Required Step: Formalize Your First-Time Registration"
             )}
-          </button>
-        ))}
-      </div>
+          </p>
+          <p className="mt-1">
+            {t(
+              "Completa los datos faltantes del formulario, adjunta tu foto tipo carnet en fondo blanco y acepta los Términos y Relevo para habilitar tu Carnet, Método de Pago, Solicitudes de Materiales y Agenda de Eventos.",
+              "Complete the missing form details, attach your white-background ID photo and accept the Terms & Waiver to unlock your ID Card, Payments, Material Requests and Events Agenda."
+            )}
+          </p>
+        </div>
+      ) : (
+        <div
+          className={`gap-3 ${
+            isMobile ? "grid grid-cols-1" : "grid grid-cols-2 lg:grid-cols-3"
+          }`}
+        >
+          {(
+            [
+              {
+                key: "perfil",
+                title: t("Perfil del Atleta", "Athlete Profile"),
+                subtitle: t("Ficha oficial y reporte PDF", "Official sheet & PDF report"),
+                badge: 0,
+              },
+              {
+                key: "carnet",
+                title: t("Carnet", "ID Card"),
+                subtitle: t("Carnet vertical oficial con QR", "Vertical official ID card with QR"),
+                badge: 0,
+              },
+              {
+                key: "pagos",
+                title: t("Método de Pago", "Payment Method"),
+                subtitle: t("Transferencia, Pago Móvil, Efectivo", "Transfer, Mobile Pay, Cash"),
+                badge: unreadNotifs.length,
+              },
+              {
+                key: "solicitudes",
+                title: t("Solicitudes de Materiales", "Material Requests"),
+                subtitle: t("Uniformes, zapatos, lazos", "Uniforms, shoes, bows"),
+                badge: myRequests.filter((r) => r.status === "pendiente").length,
+              },
+              {
+                key: "agenda",
+                title: t("Agenda de Eventos", "Events Agenda"),
+                subtitle: t("Visualización de eventos del club", "View club events"),
+                badge: unreadEventNotices.length,
+              },
+              {
+                key: "asistencia",
+                title: t("Control de Asistencia", "Attendance Control"),
+                subtitle: t("Validar QR o ID de carnet", "Validate QR or ID card"),
+                badge: 0,
+              },
+            ] as const
+          ).map((mod) => (
+            <button
+              key={mod.key}
+              type="button"
+              onClick={() => setActiveTab(mod.key)}
+              className={`flex items-center justify-between gap-3 rounded-2xl border p-4 text-left transition-all cursor-pointer ${
+                activeTab === mod.key
+                  ? "border-[#00B7A4] bg-[#00B7A4]/15 shadow-lg shadow-[#00B7A4]/10"
+                  : "border-white/10 bg-[#0D1322] hover:border-[#9D5BB8]/50 hover:bg-[#131B2E]"
+              }`}
+            >
+              <div>
+                <p className="text-sm font-extrabold text-white">{mod.title}</p>
+                <p className="mt-0.5 text-[11px] text-slate-400">{mod.subtitle}</p>
+              </div>
+              {mod.badge > 0 && (
+                <span className="rounded-full bg-amber-400/20 px-2.5 py-0.5 text-xs font-extrabold text-amber-300 border border-amber-400/30">
+                  {mod.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {activeTab === "asistencia" && (
+      {athlete.profileCompleted && activeTab === "carnet" && (
+        <AthleteCarnet athlete={athlete} />
+      )}
+
+      {athlete.profileCompleted && activeTab === "agenda" && (
+        <section className="space-y-4 rounded-3xl border border-white/10 bg-[#0D1322] p-6">
+          <div>
+            <h2 className="text-lg font-bold text-white">
+              {t("Agenda de Eventos SYNERGIA ALL STARS", "SYNERGIA ALL STARS Events Agenda")}
+            </h2>
+            <p className="mt-1 text-xs text-slate-400">
+              {t(
+                "Visualización de eventos programados desde el sistema administrativo.",
+                "Read-only view of events scheduled from the administrative system."
+              )}
+            </p>
+          </div>
+          {state.events.length === 0 ? (
+            <p className="py-8 text-center text-xs text-slate-400">
+              {t("No hay eventos programados por el momento.", "No events scheduled at this time.")}
+            </p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {state.events.map((ev) => (
+                <div
+                  key={ev.id}
+                  className="rounded-2xl border border-[#00B7A4]/30 bg-[#070B14]/85 p-4 text-xs space-y-1.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono font-bold text-amber-300">{ev.date}</span>
+                    <span className="rounded-full bg-[#7E3D97]/30 px-2 py-0.5 text-[10px] font-bold text-purple-200">
+                      {ev.category}
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-white">{ev.title}</p>
+                  <p className="text-slate-300">{ev.time}</p>
+                  {ev.location && <p className="text-[#4CE4D4]">{ev.location}</p>}
+                  {ev.description && (
+                    <p className="text-slate-400 leading-relaxed">{ev.description}</p>
+                  )}
+                  {ev.flyerDataUrl && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAthleteFlyerModal({
+                          title: ev.title,
+                          url: ev.flyerDataUrl!,
+                        })
+                      }
+                      className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-[#9D5BB8]/50 bg-[#7E3D97]/25 px-3 py-1.5 text-[11px] font-bold text-purple-100 hover:bg-[#7E3D97]/45 cursor-pointer"
+                    >
+                      {t("Ver Flyer", "View Flyer")}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {athlete.profileCompleted && activeTab === "asistencia" && (
         <AttendanceControl
           state={state}
           onStateChange={onStateChange}
@@ -625,7 +725,7 @@ export function AthletePortal({
         />
       )}
 
-      {activeTab === "perfil" && (
+      {(!athlete.profileCompleted || activeTab === "perfil") && (
         <>
 
       {/* Formulario oficial de formalización del atleta */}
@@ -647,7 +747,7 @@ export function AthletePortal({
             onClick={() => generateAthleteProfilePdf(athlete)}
             className="shrink-0 rounded-xl border border-[#4CE4D4]/40 bg-[#00B7A4]/15 px-4 py-2 text-xs font-bold text-[#4CE4D4] hover:bg-[#00B7A4]/25 cursor-pointer"
           >
-            Descargar Perfil PDF (Hoja Membretada)
+            Perfil del Atleta
           </button>
         </div>
 
@@ -1054,17 +1154,14 @@ export function AthletePortal({
             onClick={() => generateAthleteProfilePdf(athlete)}
             className="rounded-xl border border-[#4CE4D4]/40 bg-[#00B7A4]/15 px-6 py-3 text-sm font-bold text-[#4CE4D4] hover:bg-[#00B7A4]/25 cursor-pointer"
           >
-            Descargar Perfil PDF (Hoja Membretada)
+            Perfil del Atleta
           </button>
         </div>
       </form>
-
-      {/* Carnet Digital */}
-      <AthleteCarnet athlete={athlete} />
         </>
       )}
 
-      {activeTab === "pagos" && (
+      {athlete.profileCompleted && activeTab === "pagos" && (
         <div className="grid gap-6 lg:grid-cols-2">
           <form
             onSubmit={handleSubmitPayment}
@@ -1317,7 +1414,7 @@ export function AthletePortal({
         </div>
       )}
 
-      {activeTab === "solicitudes" && (
+      {athlete.profileCompleted && activeTab === "solicitudes" && (
         <div className="grid gap-6 lg:grid-cols-2">
           <form
             onSubmit={handleSubmitRequest}
@@ -1451,6 +1548,40 @@ export function AthletePortal({
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Visor flotante de Flyer en Agenda de Eventos */}
+      {athleteFlyerModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
+          onClick={() => setAthleteFlyerModal(null)}
+        >
+          <div
+            className="w-full max-w-2xl overflow-hidden rounded-[24px] border border-white/15 bg-[#0B1120] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-3.5">
+              <p className="truncate text-sm font-bold text-white">
+                {athleteFlyerModal.title}
+              </p>
+              <button
+                type="button"
+                onClick={() => setAthleteFlyerModal(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs text-white hover:bg-white/20 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex items-center justify-center bg-[#070B14] p-4 max-h-[78vh] overflow-auto">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={athleteFlyerModal.url}
+                alt={athleteFlyerModal.title}
+                className="max-h-[70vh] w-auto rounded-xl object-contain"
+              />
+            </div>
           </div>
         </div>
       )}

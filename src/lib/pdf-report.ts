@@ -244,147 +244,191 @@ export function generateEvaluationPdf(app: RegistrationApplication): void {
 
 export function generateAthleteProfilePdf(athlete: AthleteProfile): void {
   const doc = new jsPDF();
-  drawSynergiaLetterhead(doc, "Ficha Oficial de Perfil del Atleta");
+  drawSynergiaLetterhead(doc, "Perfil Oficial del Atleta");
 
-  // Foto tipo carnet en la esquina superior derecha si existe
+  // Título centrado bien separado del cintillo membretado
+  doc.setTextColor(15, 23, 42);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13.5);
+  doc.text("PERFIL OFICIAL DEL ATLETA", 105, 53, { align: "center" });
+  doc.setDrawColor(0, 183, 164);
+  doc.setLineWidth(0.6);
+  doc.line(70, 55.5, 140, 55.5);
+
+  // Tarjeta 1: Datos del Deportista + Foto Carnet a la derecha (sin tocar el membrete)
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(14, 60, 182, 54, 3, 3, "FD");
+  doc.setFillColor(0, 183, 164);
+  doc.rect(14, 60, 2.5, 54, "F");
+
+  // Marco de foto tipo carnet
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(0, 183, 164);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(156, 65, 34, 43, 2, 2, "FD");
   if (athlete.photoDataUrl && athlete.photoDataUrl.startsWith("data:image/")) {
     try {
       const format = athlete.photoDataUrl.includes("image/png") ? "PNG" : "JPEG";
-      doc.setDrawColor(0, 183, 164);
-      doc.rect(158, 42, 36, 44);
-      doc.addImage(athlete.photoDataUrl, format, 159, 43, 34, 42);
+      doc.addImage(athlete.photoDataUrl, format, 157, 66, 32, 41);
     } catch {
       // ignorar si la imagen no es compatible con jsPDF
     }
+  } else {
+    doc.setTextColor(148, 163, 184);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text("Sin foto", 173, 88, { align: "center" });
   }
 
-  let y = 46;
+  let y = 67;
   doc.setTextColor(15, 23, 42);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.text("1. DATOS DEL DEPORTISTA", 14, y);
-  y += 7;
+  doc.setFontSize(10.5);
+  doc.text("1. DATOS PERSONALES DEL DEPORTISTA", 20, y);
+  y += 6.5;
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  const addLine = (label: string, val: string, maxW = 138) => {
-    const lines = doc.splitTextToSize(`${label}: ${val}`, maxW);
-    doc.text(lines, 14, y);
-    y += Math.max(6, lines.length * 5);
+  doc.setFontSize(9.2);
+  const addField = (label: string, val: string, maxW = 132) => {
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(51, 65, 85);
+    const labelTxt = `${label}: `;
+    doc.text(labelTxt, 20, y);
+    const labelW = doc.getTextWidth(labelTxt);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(15, 23, 42);
+    const lines = doc.splitTextToSize(val, Math.max(40, maxW - labelW));
+    doc.text(lines, 20 + labelW, y);
+    y += Math.max(5.5, lines.length * 4.8);
   };
 
-  addLine("Nombre Completo", athlete.fullName);
-  addLine("ID Oficial", athlete.athleteId);
-  addLine("Cédula de Identidad", athlete.documentId || "No registrada");
-  addLine(
-    "Fecha de Nacimiento / Edad",
-    `${athlete.birthDate || "N/A"} (${athlete.age} años)`
-  );
-  addLine("Categoría / Posición", `${athlete.category} · ${athlete.position}`);
-  addLine(
-    "Fecha de Ingreso al Club",
+  addField("Nombre Completo", athlete.fullName);
+  addField("ID Oficial", `${athlete.athleteId}   |   Cédula: ${athlete.documentId || "N/A"}`);
+  addField("Nacimiento / Edad", `${athlete.birthDate || "N/A"} (${athlete.age} años)`);
+  addField("Categoría", `${athlete.category} · ${athlete.position}`);
+  addField(
+    "Ingreso al Club",
     athlete.clubJoinDate || athlete.formalizedAt.slice(0, 10)
   );
-  addLine("Dirección", athlete.homeAddress || "No registrada", 180);
+  addField("Dirección", athlete.homeAddress || "No registrada", 132);
 
-  y += 4;
+  // Tarjeta 2: Información Médica y Alergias
+  let cardY = 119;
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(14, cardY, 182, 36, 3, 3, "FD");
+  doc.setFillColor(126, 61, 151);
+  doc.rect(14, cardY, 2.5, 36, "F");
+
+  y = cardY + 7;
+  doc.setTextColor(88, 28, 135);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("2. INFORMACIÓN MÉDICA Y ALERGIAS", 14, y);
-  y += 7;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
+  doc.setFontSize(10.5);
+  doc.text("2. INFORMACIÓN MÉDICA Y ALERGIAS", 20, y);
+  y += 6.5;
 
-  addLine("Tipo de Sangre", athlete.bloodType || "No registrado", 180);
-  addLine(
-    "Enfermedad, condición médica o lesión previa",
+  doc.setFontSize(9.2);
+  addField("Tipo de Sangre", athlete.bloodType || "No registrado", 172);
+  addField(
+    "Condición médica / lesión previa",
     athlete.hasMedicalCondition
       ? `SÍ — ${athlete.medicalConditionDetail || "Sin detalle"}`
       : "NO",
-    180
+    172
   );
-  addLine(
-    "Alérgico/a a algún medicamento",
+  addField(
+    "Alergias a medicamentos",
     athlete.hasAllergies
       ? `SÍ — ${athlete.allergiesDetail || "Sin detalle"}`
       : "NO",
-    180
+    172
   );
 
-  y += 4;
+  // Tarjeta 3: Datos del Representante y Contacto
+  cardY = 160;
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(14, cardY, 182, 36, 3, 3, "FD");
+  doc.setFillColor(0, 183, 164);
+  doc.rect(14, cardY, 2.5, 36, "F");
+
+  y = cardY + 7;
+  doc.setTextColor(15, 23, 42);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("3. DATOS DEL REPRESENTANTE / CONTACTO", 14, y);
-  y += 7;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
+  doc.setFontSize(10.5);
+  doc.text("3. DATOS DEL REPRESENTANTE / CONTACTO", 20, y);
+  y += 6.5;
 
-  addLine(
-    "Nombre y Apellido del Representante",
-    athlete.repName || athlete.fullName,
-    180
+  doc.setFontSize(9.2);
+  addField(
+    "Representante",
+    `${athlete.repName || athlete.fullName} (C.I.: ${athlete.repDocumentId || athlete.documentId || "N/A"})`,
+    172
   );
-  addLine(
-    "Cédula del Representante",
-    athlete.repDocumentId || athlete.documentId || "No registrada",
-    180
-  );
-  addLine(
+  addField(
     "Contacto Principal",
     athlete.repPhone || athlete.phone || "No registrado",
-    180
+    172
   );
-  addLine(
+  addField(
     "Contacto Secundario",
     athlete.repSecondaryPhone || athlete.emergencyPhone || "No registrado",
-    180
+    172
   );
 
-  y += 4;
+  // Tarjeta 4: Documentos y Compromisos Legales
+  cardY = 201;
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(14, cardY, 182, 42, 3, 3, "FD");
+  doc.setFillColor(15, 23, 42);
+  doc.rect(14, cardY, 2.5, 42, "F");
+
+  y = cardY + 7;
+  doc.setTextColor(15, 23, 42);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("4. DOCUMENTOS Y COMPROMISOS LEGALES", 14, y);
-  y += 7;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
+  doc.setFontSize(10.5);
+  doc.text("4. DOCUMENTOS Y COMPROMISOS LEGALES", 20, y);
+  y += 6.5;
 
-  addLine(
-    "Partida de nacimiento o cédula del deportista",
+  doc.setFontSize(9);
+  addField(
+    "Partida / Cédula Deportista",
     athlete.athleteIdDocName ? `Adjunto (${athlete.athleteIdDocName})` : "Pendiente",
-    180
+    172
   );
-  addLine(
-    "Foto tipo carnet (fondo blanco)",
+  addField(
+    "Foto Carnet (Fondo Blanco)",
     athlete.photoDataUrl ? "Adjunta" : "Pendiente",
-    180
+    172
   );
-  addLine(
-    "Cédula del representante",
+  addField(
+    "Cédula del Representante",
     athlete.repIdDocName ? `Adjunto (${athlete.repIdDocName})` : "Pendiente",
-    180
+    172
   );
-  addLine(
-    "Términos y Condiciones del Club",
-    athlete.acceptedTerms ? "ACEPTADOS" : "Pendiente",
-    180
-  );
-  addLine(
-    "Relevo de Responsabilidad del Club",
-    athlete.acceptedWaiver ? "ACEPTADO" : "Pendiente",
-    180
+  addField(
+    "Términos y Relevo",
+    `${athlete.acceptedTerms ? "Términos ACEPTADOS" : "Términos pendientes"}   |   ${athlete.acceptedWaiver ? "Relevo ACEPTADO" : "Relevo pendiente"}`,
+    172
   );
 
-  // Pie de hoja membretada
-  if (y < 260) y = 262;
+  // Firmas oficiales centradas
   doc.setDrawColor(100, 116, 139);
-  doc.line(14, y, 85, y);
-  doc.line(120, y, 194, y);
+  doc.setLineWidth(0.35);
+  doc.line(22, 265, 88, 265);
+  doc.line(122, 265, 188, 265);
+  doc.setTextColor(51, 65, 85);
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
-  doc.text("Firma del Representante / Atleta", 22, y + 5);
-  doc.text("Dirección SYNERGIA ALL STARS", 132, y + 5);
+  doc.text("Firma del Representante / Atleta", 55, 270, { align: "center" });
+  doc.text("Dirección General SYNERGIA ALL STARS", 155, 270, { align: "center" });
+
+  drawSynergiaFooter(doc);
 
   const safeName = athlete.fullName.replace(/[^a-zA-Z0-9_-]/g, "_");
-  doc.save(`Perfil_Membretado_${safeName}.pdf`);
+  doc.save(`Perfil_del_Atleta_${safeName}.pdf`);
 }
 
 export function generateAthletesListPdf(

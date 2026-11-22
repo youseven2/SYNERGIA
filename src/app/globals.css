@@ -28,6 +28,30 @@ html[data-device="tablet"] .responsive-report-card {
   body {
     background: #ffffff !important;
     color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.printing-carnet * {
+    visibility: hidden !important;
+  }
+
+  body.printing-carnet #carnet-printable,
+  body.printing-carnet #carnet-printable * {
+    visibility: visible !important;
+  }
+
+  body.printing-carnet #carnet-printable {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9999 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 12mm !important;
+    padding: 10mm !important;
+    background: #ffffff !important;
   }
 }
 

@@ -1784,7 +1784,7 @@ export function CoachDashboard({
                           }
                           className="rounded-xl border border-[#4CE4D4]/40 bg-[#00B7A4]/15 px-3 py-1.5 text-xs font-bold text-[#4CE4D4] hover:bg-[#00B7A4]/25 cursor-pointer"
                         >
-                          {t("Perfil PDF (Membretado)", "Profile PDF")}
+                          {t("Perfil del Atleta", "Athlete Profile PDF")}
                         </button>
                       </div>
                     </div>
