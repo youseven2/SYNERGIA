@@ -5,6 +5,77 @@ import QRCode from "qrcode";
 import { AthleteProfile } from "@/lib/synergia-store";
 import { useI18n } from "@/components/I18nContext";
 
+function CarnetBackgroundPattern({ variant }: { variant: "front" | "back" }) {
+  const gradId = `synergia-carnet-grad-${variant}`;
+  const waveGradId = `synergia-wave-grad-${variant}`;
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 285 440"
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+    >
+      <defs>
+        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#7E3D97" stopOpacity="0.16" />
+          <stop offset="50%" stopColor="#3F7A9D" stopOpacity="0.08" />
+          <stop offset="100%" stopColor="#00B7A4" stopOpacity="0.18" />
+        </linearGradient>
+        <linearGradient id={waveGradId} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#7E3D97" stopOpacity="0.28" />
+          <stop offset="50%" stopColor="#5C6B9E" stopOpacity="0.20" />
+          <stop offset="100%" stopColor="#00B7A4" stopOpacity="0.30" />
+        </linearGradient>
+      </defs>
+
+      {/* Base degradado suave morado -> verde Synergia */}
+      <rect width="285" height="440" fill={`url(#${gradId})`} />
+
+      {/* Ondas fluidas superiores e inferiores */}
+      <path
+        d="M0 95 C 75 65, 195 130, 285 88 L 285 0 L 0 0 Z"
+        fill={`url(#${waveGradId})`}
+        opacity="0.45"
+      />
+      <path
+        d="M0 112 C 90 142, 185 82, 285 118"
+        fill="none"
+        stroke={`url(#${waveGradId})`}
+        strokeWidth="2.5"
+      />
+      <path
+        d="M0 360 C 85 322, 195 392, 285 344 L 285 440 L 0 440 Z"
+        fill={`url(#${waveGradId})`}
+        opacity="0.55"
+      />
+      <path
+        d="M0 344 C 95 310, 200 375, 285 330"
+        fill="none"
+        stroke={`url(#${waveGradId})`}
+        strokeWidth="2"
+      />
+
+      {/* Degradación geométrica de cuadrados de pequeños a grandes */}
+      <rect x="14" y="138" width="6" height="6" rx="1.5" fill="#7E3D97" opacity="0.24" />
+      <rect x="26" y="150" width="9" height="9" rx="2" fill="#7E3D97" opacity="0.22" />
+      <rect x="16" y="168" width="13" height="13" rx="2.5" fill="#5D649B" opacity="0.20" />
+      <rect x="34" y="186" width="18" height="18" rx="3.5" fill="#00B7A4" opacity="0.18" />
+      <rect x="12" y="212" width="24" height="24" rx="4.5" fill="#00B7A4" opacity="0.16" />
+
+      <rect x="262" y="142" width="7" height="7" rx="1.5" fill="#00B7A4" opacity="0.24" />
+      <rect x="247" y="156" width="11" height="11" rx="2" fill="#00B7A4" opacity="0.22" />
+      <rect x="255" y="176" width="15" height="15" rx="3" fill="#5D649B" opacity="0.20" />
+      <rect x="234" y="198" width="21" height="21" rx="4" fill="#7E3D97" opacity="0.17" />
+      <rect x="246" y="228" width="28" height="28" rx="5" fill="#7E3D97" opacity="0.14" />
+
+      <rect x="22" y="294" width="8" height="8" rx="1.5" fill="#7E3D97" opacity="0.22" />
+      <rect x="36" y="306" width="12" height="12" rx="2.5" fill="#00B7A4" opacity="0.20" />
+      <rect x="236" y="286" width="10" height="10" rx="2" fill="#00B7A4" opacity="0.22" />
+      <rect x="218" y="302" width="16" height="16" rx="3" fill="#7E3D97" opacity="0.18" />
+    </svg>
+  );
+}
+
 export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
   const { t } = useI18n();
   const [qrSvg, setQrSvg] = useState<string>("");
@@ -68,16 +139,20 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
         id="carnet-printable"
         className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-6 py-2"
       >
-        {/* ANVERSO VERTICAL (FRENTE) - Diseño Blanco */}
-        <div className="relative flex w-[285px] h-[440px] print:w-[55mm] print:h-[85mm] print:min-w-[55mm] print:max-w-[55mm] print:min-h-[85mm] print:max-h-[85mm] flex-col justify-between overflow-hidden rounded-[20px] print:rounded-[8px] border-2 border-[#00B7A4] bg-white text-slate-900 shadow-2xl">
+        {/* ANVERSO VERTICAL (FRENTE) - Diseño Blanco con Fondo Degradado Synergia */}
+        <div
+          style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
+          className="relative flex w-[285px] h-[440px] print:w-[55mm] print:h-[85mm] print:min-w-[55mm] print:max-w-[55mm] print:min-h-[85mm] print:max-h-[85mm] flex-col justify-between overflow-hidden rounded-[20px] print:rounded-[8px] border-2 border-[#00B7A4] bg-white text-slate-900 shadow-2xl"
+        >
+          <CarnetBackgroundPattern variant="front" />
           {/* Franja superior turquesa + morado */}
-          <div>
+          <div className="relative z-10">
             <div className="flex h-2.5 print:h-1.5 w-full">
               <div className="w-3/5 bg-[#00B7A4]" />
               <div className="w-2/5 bg-[#7E3D97]" />
             </div>
 
-            <div className="flex flex-col items-center px-3 pt-2.5 pb-2 print:px-2 print:pt-1.5 print:pb-1 text-center border-b border-slate-200 bg-slate-50">
+            <div className="flex flex-col items-center px-3 pt-2.5 pb-2 print:px-2 print:pt-1.5 print:pb-1 text-center border-b border-slate-200/70 bg-white/75 backdrop-blur-[1px]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/synergia-logo.svg"
@@ -91,8 +166,8 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
           </div>
 
           {/* Foto y Datos Centrales con letras más grandes */}
-          <div className="flex flex-col items-center px-3.5 py-2 print:px-2 print:py-1 text-center space-y-2 print:space-y-1">
-            <div className="h-24 w-20 print:h-16 print:w-14 overflow-hidden rounded-xl border-2 border-[#00B7A4] bg-slate-100 shadow-sm flex items-center justify-center">
+          <div className="relative z-10 flex flex-col items-center px-3.5 py-2 print:px-2 print:py-1 text-center space-y-2 print:space-y-1">
+            <div className="h-24 w-20 print:h-16 print:w-14 overflow-hidden rounded-xl border-2 border-[#00B7A4] bg-white shadow-sm flex items-center justify-center">
               {athlete.photoDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -107,7 +182,7 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
               )}
             </div>
 
-            <div className="w-full space-y-0.5">
+            <div className="w-full space-y-0.5 rounded-lg bg-white/70 px-1.5 py-0.5">
               <p className="truncate text-base print:text-[11px] font-black tracking-tight text-slate-950">
                 {athlete.fullName}
               </p>
@@ -122,7 +197,7 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
               </p>
             </div>
 
-            <div className="grid w-full grid-cols-3 gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 print:px-1 print:py-0.5 text-[10px] print:text-[7.5px]">
+            <div className="grid w-full grid-cols-3 gap-1 rounded-lg border border-slate-200/80 bg-white/85 px-2 py-1 print:px-1 print:py-0.5 text-[10px] print:text-[7.5px]">
               <div>
                 <span className="block text-slate-500 font-semibold">Doc.</span>
                 <span className="font-extrabold text-slate-900 truncate block">
@@ -143,7 +218,7 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
           </div>
 
           {/* Código QR en la base */}
-          <div className="flex flex-col items-center justify-center border-t border-slate-200 bg-slate-50 px-3 py-2 print:py-1">
+          <div className="relative z-10 flex flex-col items-center justify-center border-t border-slate-200/70 bg-white/75 px-3 py-2 print:py-1">
             {qrSvg && (
               <div
                 className="h-16 w-16 print:h-12 print:w-12 rounded-lg border border-slate-300 bg-white p-1 flex items-center justify-center [&>svg]:h-full [&>svg]:w-full"
@@ -156,15 +231,19 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
           </div>
         </div>
 
-        {/* REVERSO VERTICAL - Diseño Blanco */}
-        <div className="relative flex w-[285px] h-[440px] print:w-[55mm] print:h-[85mm] print:min-w-[55mm] print:max-w-[55mm] print:min-h-[85mm] print:max-h-[85mm] flex-col justify-between overflow-hidden rounded-[20px] print:rounded-[8px] border-2 border-[#7E3D97] bg-white text-slate-900 shadow-2xl">
-          <div>
+        {/* REVERSO VERTICAL - Diseño Blanco con Fondo Degradado Synergia */}
+        <div
+          style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
+          className="relative flex w-[285px] h-[440px] print:w-[55mm] print:h-[85mm] print:min-w-[55mm] print:max-w-[55mm] print:min-h-[85mm] print:max-h-[85mm] flex-col justify-between overflow-hidden rounded-[20px] print:rounded-[8px] border-2 border-[#7E3D97] bg-white text-slate-900 shadow-2xl"
+        >
+          <CarnetBackgroundPattern variant="back" />
+          <div className="relative z-10">
             <div className="flex h-2.5 print:h-1.5 w-full">
               <div className="w-2/5 bg-[#7E3D97]" />
               <div className="w-3/5 bg-[#00B7A4]" />
             </div>
 
-            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2.5 print:px-2.5 print:py-1.5">
+            <div className="flex items-center justify-between border-b border-slate-200/70 bg-white/75 px-4 py-2.5 print:px-2.5 print:py-1.5">
               <span className="text-[11px] print:text-[8px] font-extrabold uppercase tracking-wider text-[#7E3D97]">
                 Ficha Médica y Emergencia
               </span>
@@ -174,7 +253,7 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
             </div>
 
             <div className="space-y-2 print:space-y-1.5 px-3.5 py-2.5 print:px-2.5 print:py-1.5 text-[11px] print:text-[8px]">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 print:p-1.5">
+              <div className="rounded-lg border border-slate-200/80 bg-white/85 p-2 print:p-1.5">
                 <span className="block text-[9.5px] print:text-[6.8px] font-bold uppercase text-slate-500">
                   Alergias a medicamentos:
                 </span>
@@ -185,7 +264,7 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
                 </span>
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 print:p-1.5">
+              <div className="rounded-lg border border-slate-200/80 bg-white/85 p-2 print:p-1.5">
                 <span className="block text-[9.5px] print:text-[6.8px] font-bold uppercase text-slate-500">
                   Condición médica / Medicación:
                 </span>
@@ -196,7 +275,7 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
                 </span>
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 print:p-1.5">
+              <div className="rounded-lg border border-slate-200/80 bg-white/85 p-2 print:p-1.5">
                 <span className="block text-[9.5px] print:text-[6.8px] font-bold uppercase text-slate-500">
                   Dirección:
                 </span>
@@ -205,7 +284,7 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
                 </span>
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 print:p-1.5">
+              <div className="rounded-lg border border-slate-200/80 bg-white/85 p-2 print:p-1.5">
                 <span className="block text-[9.5px] print:text-[6.8px] font-bold uppercase text-slate-500">
                   Contacto de emergencia:
                 </span>
@@ -219,7 +298,7 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
             </div>
           </div>
 
-          <div className="border-t border-slate-200 bg-slate-50 px-3.5 py-2.5 print:px-2.5 print:py-1.5 text-center space-y-1.5 print:space-y-1">
+          <div className="relative z-10 border-t border-slate-200/70 bg-white/75 px-3.5 py-2.5 print:px-2.5 print:py-1.5 text-center space-y-1.5 print:space-y-1">
             <p className="text-[9px] print:text-[6.5px] leading-snug font-medium text-slate-600">
               Este carnet es personal e intransferible y acredita al atleta como
               miembro activo de SYNERGIA ALL STARS.
