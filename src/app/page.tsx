@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -85,6 +86,12 @@ const CHEER_TEAMS = [
 export default function HomePage() {
   const { lang, t } = useI18n();
   const { isMobile, isTablet } = useDevice();
+
+  useEffect(() => {
+    if (!window.location.hash) {
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, []);
 
   return (
     <div className="flex min-h-screen flex-col">

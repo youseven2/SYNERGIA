@@ -10,6 +10,7 @@ import {
   SynergiaEvent,
   loadSynergiaState,
 } from "@/lib/synergia-store";
+import { recordSectionView } from "@/lib/analytics-store";
 
 interface SearchResultItem {
   id: string;
@@ -172,26 +173,44 @@ export function Navbar() {
             />
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-5 text-sm font-semibold text-slate-200">
-            <Link href="/#inicio" className="hover:text-[#00B7A4] transition-colors">
+          <nav className="hidden lg:flex lg:flex-1 lg:justify-center items-center gap-6 text-sm font-semibold text-slate-200">
+            <Link
+              href="/#inicio"
+              onClick={() => recordSectionView("Inicio")}
+              className="hover:text-[#00B7A4] transition-colors"
+            >
               {t("Inicio", "Home")}
             </Link>
-            <Link href="/#galeria" className="hover:text-[#00B7A4] transition-colors">
+            <Link
+              href="/#galeria"
+              onClick={() => recordSectionView("Galería")}
+              className="hover:text-[#00B7A4] transition-colors"
+            >
               {t("Galería", "Gallery")}
             </Link>
-            <Link href="/#equipos" className="hover:text-[#00B7A4] transition-colors">
+            <Link
+              href="/#equipos"
+              onClick={() => recordSectionView("Equipos Cheer")}
+              className="hover:text-[#00B7A4] transition-colors"
+            >
               {t("Equipos Cheer", "Cheer Teams")}
             </Link>
             <button
               type="button"
-              onClick={() => setEventsOpen(true)}
+              onClick={() => {
+                recordSectionView("Eventos");
+                setEventsOpen(true);
+              }}
               className="hover:text-[#00B7A4] transition-colors cursor-pointer"
             >
               {t("Eventos", "Events")}
             </button>
             <button
               type="button"
-              onClick={() => setAboutOpen(true)}
+              onClick={() => {
+                recordSectionView("Conócenos");
+                setAboutOpen(true);
+              }}
               className="hover:text-[#B575CF] transition-colors cursor-pointer"
             >
               {t("Conócenos", "About Us")}

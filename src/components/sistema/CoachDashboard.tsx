@@ -28,6 +28,12 @@ import {
 } from "@/lib/pdf-report";
 import { AthleteCarnet } from "@/components/AthleteCarnet";
 import { AttendanceControl } from "@/components/sistema/AttendanceControl";
+import {
+  AnalyticsState,
+  formatDuration,
+  loadAnalyticsState,
+  resetAnalyticsState,
+} from "@/lib/analytics-store";
 import { useDevice } from "@/components/DeviceContext";
 import { useI18n } from "@/components/I18nContext";
 
@@ -41,7 +47,8 @@ type CoachTab =
   | "morosos"
   | "solicitudes"
   | "eventos"
-  | "asistencia";
+  | "asistencia"
+  | "metricas";
 
 interface CoachDashboardProps {
   state: SynergiaState;
@@ -135,6 +142,18 @@ export function CoachDashboard({
     title: string;
     url: string;
   } | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsState>(() =>
+    loadAnalyticsState()
+  );
+
+  useEffect(() => {
+    if (activeTab === "metricas" || activeTab === "menu") {
+      const raf = requestAnimationFrame(() => {
+        setAnalytics(loadAnalyticsState());
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [activeTab]);
 
   const newApplicantsCount = state.applications.filter(
     (a) => a.status === "nuevo"
@@ -923,7 +942,7 @@ export function CoachDashboard({
             <button
               type="button"
               onClick={() => setActiveTab("asistencia")}
-              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-emerald-400/40 bg-gradient-to-r from-[#065F46] via-[#0F766E] to-[#4A1C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-[#4CE4D4] cursor-pointer"
+              className="col-span-2 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-emerald-400/40 bg-gradient-to-r from-[#065F46] via-[#0F766E] to-[#4A1C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.015] hover:border-[#4CE4D4] cursor-pointer"
             >
               <div className="flex items-start justify-between">
                 <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -940,6 +959,30 @@ export function CoachDashboard({
                 </p>
                 <p className="text-[11px] text-slate-200/85">
                   {t("Escanear QR con cámara · Rechazo automático a morosos y suspendidos", "Scan QR with camera · Auto-reject overdue & suspended athletes")}
+                </p>
+              </div>
+            </button>
+
+            {/* 10. ESTADÍSTICAS Y MÉTRICAS DE LA PÁGINA (Wide Tile) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("metricas")}
+              className="col-span-2 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-indigo-400/40 bg-gradient-to-r from-indigo-800 via-[#381B4C] to-[#0D3B4C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.015] hover:border-indigo-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-indigo-200">
+                  {analytics.totalVisits} {t("visita(s)", "visits")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Estadísticas y Métricas Web", "Web Analytics & Metrics")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t("Visitas totales, duración promedio, contenido más visto y países", "Total visits, avg duration, top content & countries")}
                 </p>
               </div>
             </button>
@@ -1004,6 +1047,11 @@ export function CoachDashboard({
                 key: "asistencia",
                 label: t("Asistencia QR", "QR Attendance"),
                 badge: state.attendanceRecords.length,
+              },
+              {
+                key: "metricas",
+                label: t("Métricas", "Analytics"),
+                badge: analytics.totalVisits,
               },
             ] as const
           ).map((tab) => (
@@ -1897,7 +1945,7 @@ export function CoachDashboard({
             <button
               type="button"
               onClick={() => setActiveTab("asistencia")}
-              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-emerald-400/40 bg-gradient-to-r from-[#065F46] via-[#0F766E] to-[#4A1C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-[#4CE4D4] cursor-pointer"
+              className="col-span-2 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-emerald-400/40 bg-gradient-to-r from-[#065F46] via-[#0F766E] to-[#4A1C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.015] hover:border-[#4CE4D4] cursor-pointer"
             >
               <div className="flex items-start justify-between">
                 <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -1914,6 +1962,30 @@ export function CoachDashboard({
                 </p>
                 <p className="text-[11px] text-slate-200/85">
                   {t("Escanear QR con cámara · Rechazo automático a morosos y suspendidos", "Scan QR with camera · Auto-reject overdue & suspended athletes")}
+                </p>
+              </div>
+            </button>
+
+            {/* 10. ESTADÍSTICAS Y MÉTRICAS DE LA PÁGINA (Wide Tile) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("metricas")}
+              className="col-span-2 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-indigo-400/40 bg-gradient-to-r from-indigo-800 via-[#381B4C] to-[#0D3B4C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.015] hover:border-indigo-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-indigo-200">
+                  {analytics.totalVisits} {t("visita(s)", "visits")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Estadísticas y Métricas Web", "Web Analytics & Metrics")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t("Visitas totales, duración promedio, contenido más visto y países", "Total visits, avg duration, top content & countries")}
                 </p>
               </div>
             </button>
@@ -2403,7 +2475,7 @@ export function CoachDashboard({
             <button
               type="button"
               onClick={() => setActiveTab("asistencia")}
-              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-emerald-400/40 bg-gradient-to-r from-[#065F46] via-[#0F766E] to-[#4A1C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-[#4CE4D4] cursor-pointer"
+              className="col-span-2 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-emerald-400/40 bg-gradient-to-r from-[#065F46] via-[#0F766E] to-[#4A1C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.015] hover:border-[#4CE4D4] cursor-pointer"
             >
               <div className="flex items-start justify-between">
                 <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -2423,6 +2495,30 @@ export function CoachDashboard({
                 </p>
               </div>
             </button>
+
+            {/* 10. ESTADÍSTICAS Y MÉTRICAS DE LA PÁGINA (Wide Tile) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("metricas")}
+              className="col-span-2 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-indigo-400/40 bg-gradient-to-r from-indigo-800 via-[#381B4C] to-[#0D3B4C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.015] hover:border-indigo-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-indigo-200">
+                  {analytics.totalVisits} {t("visita(s)", "visits")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Estadísticas y Métricas Web", "Web Analytics & Metrics")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t("Visitas totales, duración promedio, contenido más visto y países", "Total visits, avg duration, top content & countries")}
+                </p>
+              </div>
+            </button>
           </div>
         </section>
       )}
@@ -2435,6 +2531,156 @@ export function CoachDashboard({
           recordedBy={currentUser?.username ?? "coach"}
         />
       )}
+
+      {/* 10. ESTADÍSTICAS Y MÉTRICAS DE PÁGINA */}
+      {activeTab === "metricas" && (() => {
+        const avgSeconds =
+          analytics.totalVisits > 0
+            ? analytics.totalDurationSeconds / analytics.totalVisits
+            : 0;
+        const rankedSections = Object.entries(analytics.sectionViews).sort(
+          (a, b) => b[1] - a[1]
+        );
+        const topSection = rankedSections[0] ?? ["Inicio", 0];
+        const maxSectionViews = Math.max(1, topSection[1]);
+
+        const rankedCountries = Object.entries(analytics.visitsByCountry).sort(
+          (a, b) => b[1] - a[1]
+        );
+        const totalCountryVisits = Math.max(
+          1,
+          rankedCountries.reduce((s, [, v]) => s + v, 0)
+        );
+
+        return (
+          <section className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#0D1322] p-5">
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  {t("Estadísticas y Métricas de la Página", "Website Statistics & Metrics")}
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  {t(
+                    "Datos vinculados en tiempo real con la navegación, duración de sesiones y origen de los visitantes.",
+                    "Real-time metrics linked to site navigation, session duration and visitor countries."
+                  )}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAnalytics(loadAnalyticsState())}
+                  className="rounded-xl bg-[#00B7A4] px-4 py-2 text-xs font-bold text-slate-950 hover:bg-[#14CEBA] cursor-pointer"
+                >
+                  {t("Actualizar Métricas", "Refresh Metrics")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAnalytics(resetAnalyticsState())}
+                  className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                >
+                  {t("Reiniciar", "Reset")}
+                </button>
+              </div>
+            </div>
+
+            {/* KPIs */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-[#00B7A4]/30 bg-[#0D1322] p-5">
+                <p className="text-xs text-slate-400">{t("Visitas Totales", "Total Visits")}</p>
+                <p className="mt-1 text-3xl font-black text-[#4CE4D4]">
+                  {analytics.totalVisits}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[#9D5BB8]/35 bg-[#0D1322] p-5">
+                <p className="text-xs text-slate-400">{t("Tiempo Total de Duración", "Total Duration")}</p>
+                <p className="mt-1 text-3xl font-black text-purple-200">
+                  {formatDuration(analytics.totalDurationSeconds)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-emerald-500/30 bg-[#0D1322] p-5">
+                <p className="text-xs text-slate-400">{t("Tiempo Promedio en Página", "Average Page Duration")}</p>
+                <p className="mt-1 text-3xl font-black text-emerald-300">
+                  {formatDuration(avgSeconds)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-amber-400/30 bg-[#0D1322] p-5">
+                <p className="text-xs text-slate-400">{t("Contenido Más Visto", "Most Viewed Content")}</p>
+                <p className="mt-1 text-xl font-extrabold text-amber-300 truncate">
+                  {topSection[0]}
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  {topSection[1]} {t("vista(s)", "views")}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Contenido Más Visto */}
+              <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-4">
+                <h3 className="text-base font-bold text-white">
+                  {t("Contenido Más Visto", "Most Viewed Content")}
+                </h3>
+                <div className="space-y-3">
+                  {rankedSections.map(([section, views]) => {
+                    const pct = Math.round((views / maxSectionViews) * 100);
+                    return (
+                      <div key={section} className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="font-semibold text-slate-200">{section}</span>
+                          <span className="font-mono font-bold text-[#4CE4D4]">
+                            {views}
+                          </span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-[#00B7A4] to-[#7E3D97]"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Visitas por País */}
+              <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-4">
+                <h3 className="text-base font-bold text-white">
+                  {t("Visitas por País", "Visits by Country")}
+                </h3>
+                {rankedCountries.length === 0 ? (
+                  <p className="py-8 text-center text-xs text-slate-400">
+                    {t("Aún no hay visitas registradas por país.", "No country visits recorded yet.")}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {rankedCountries.map(([country, count]) => {
+                      const pct = Math.round((count / totalCountryVisits) * 100);
+                      return (
+                        <div key={country} className="space-y-1 text-xs">
+                          <div className="flex justify-between">
+                            <span className="font-semibold text-slate-200">{country}</span>
+                            <span className="font-mono font-bold text-amber-300">
+                              {count} ({pct}%)
+                            </span>
+                          </div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-[#7E3D97] to-amber-400"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* MODAL FLOTANTE: Visor de Flyer (Entrenador, sin descarga) */}
       {coachFlyerModal && (
