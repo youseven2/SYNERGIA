@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useDevice } from "@/components/DeviceContext";
 import { useI18n } from "@/components/I18nContext";
 
@@ -26,11 +27,14 @@ const WHATSAPP_CONTACTS = [
 ];
 
 export function FloatingSocials() {
+  const pathname = usePathname();
   const { isMobile } = useDevice();
   const { t } = useI18n();
   const [waOpen, setWaOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const containerRef = useRef<HTMLElement | null>(null);
+
+  const isSystemRoute = pathname?.startsWith("/sistema");
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -57,6 +61,10 @@ export function FloatingSocials() {
 
   const btnSize = isMobile ? "h-11 w-11" : "h-12 w-12";
   const iconSize = "h-5 w-5";
+
+  if (isSystemRoute) {
+    return null;
+  }
 
   return (
     <>
