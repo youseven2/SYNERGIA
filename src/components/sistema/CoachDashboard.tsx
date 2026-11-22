@@ -120,6 +120,12 @@ export function CoachDashboard({
   );
   const [athleteCategoryFilter, setAthleteCategoryFilter] =
     useState<string>("TODAS");
+  const [lastFormalizedWa, setLastFormalizedWa] = useState<{
+    athleteName: string;
+    phoneDisplay: string;
+    waUrl: string;
+    message: string;
+  } | null>(null);
 
   // Contabilidad y Morosos state
   const [accountingMonth, setAccountingMonth] = useState(getCurrentMonthKey());
@@ -283,6 +289,53 @@ export function CoachDashboard({
     setFormalizeAppId(null);
     setSelectedAthleteId(newAthlete.athleteId);
     setActiveTab("perfil");
+
+    // Construir mensaje formal de WhatsApp con datos de la escuela, del atleta y credenciales
+    const rawPhone = (app.phone || app.repPhone || "").trim();
+    let digits = rawPhone.replace(/\D/g, "");
+    if (digits.startsWith("0")) {
+      digits = `58${digits.slice(1)}`;
+    }
+    const formalMessage = [
+      "🌟 *SYNERGIA ALL STARS* 🌟",
+      "_Club Deportivo Exclusivo de Porrismo (Cheerleading)_",
+      "📍 Sedes: Los Dos Caminos (Av. El Centro) / Bellas Artes (Galería de Arte Nacional), Caracas",
+      "📞 Dirección: Dir. Felix (+58 414-3311099) | Dir. Daniela (+58 424-1535062)",
+      "",
+      "Estimado(a), nos complace informarle que la inscripción del atleta ha sido *FORMALIZADA* exitosamente:",
+      "",
+      `🏅 *Atleta:* ${newAthlete.fullName}`,
+      `🪪 *Documento / Cédula:* ${newAthlete.documentId}`,
+      `🆔 *ID Oficial:* ${newAthlete.athleteId}`,
+      `🏆 *Categoría Asignada:* ${newAthlete.category}`,
+      `🤸 *Posición:* ${newAthlete.position}`,
+      ...(app.isMinor && app.repName
+        ? [`👨‍👩‍👧 *Representante:* ${app.repName}`]
+        : []),
+      "",
+      "🔐 *CREDENCIALES DE INGRESO AL SISTEMA:*",
+      `• *Usuario:* ${newAthlete.username}`,
+      `• *Clave provisional:* 123456`,
+      "",
+      "📲 Ingresa a nuestra plataforma en la sección *Ingresar al Sistema*, actualiza tu clave provisional, completa el formulario oficial con tu foto tipo carnet en fondo blanco y obtén tu *Carnet Oficial con Código QR*.",
+      "",
+      "¡Bienvenidos a la familia *SYNERGIA ALL STARS*! 💙💜",
+    ].join("\n");
+
+    const waUrl = digits
+      ? `https://wa.me/${digits}?text=${encodeURIComponent(formalMessage)}`
+      : `https://wa.me/?text=${encodeURIComponent(formalMessage)}`;
+
+    setLastFormalizedWa({
+      athleteName: newAthlete.fullName,
+      phoneDisplay: rawPhone || "Sin número registrado",
+      waUrl,
+      message: formalMessage,
+    });
+
+    if (typeof window !== "undefined") {
+      window.open(waUrl, "_blank", "noopener,noreferrer");
+    }
   }
 
   // --- FORMULARIOS ACTIONS ---
@@ -1563,6 +1616,49 @@ export function CoachDashboard({
 
         return (
         <div className="space-y-6">
+          {lastFormalizedWa && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-emerald-400/45 bg-emerald-500/15 p-4 text-xs text-emerald-100">
+              <div className="space-y-1">
+                <p className="text-sm font-extrabold text-emerald-300">
+                  {t(
+                    `Inscripción formalizada · Aviso WhatsApp listo para ${lastFormalizedWa.athleteName}`,
+                    `Registration formalized · WhatsApp notice ready for ${lastFormalizedWa.athleteName}`
+                  )}
+                </p>
+                <p className="text-slate-200">
+                  {t("Teléfono registrado en INSCRIBETE:", "Phone from registration:")}{" "}
+                  <strong className="font-mono">{lastFormalizedWa.phoneDisplay}</strong>
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <a
+                  href={lastFormalizedWa.waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400"
+                >
+                  {t("Enviar por WhatsApp", "Send via WhatsApp")}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(lastFormalizedWa.message);
+                  }}
+                  className="rounded-xl border border-white/20 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10 cursor-pointer"
+                >
+                  {t("Copiar Mensaje", "Copy Message")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLastFormalizedWa(null)}
+                  className="rounded-xl border border-white/10 px-2.5 py-2 text-xs text-slate-300 hover:text-white cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Barra de Reportes y Filtro por Categoría */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#0D1322] p-5">
             <div>
