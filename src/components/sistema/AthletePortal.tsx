@@ -452,9 +452,14 @@ export function AthletePortal({
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-white/10 bg-[#0D1322] p-5">
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
-            {t("Portal Exclusivo del Atleta · SYNERGIA ALL STARS", "Exclusive Athlete Portal · SYNERGIA ALL STARS")}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+              {t("Portal Exclusivo del Atleta · SYNERGIA ALL STARS", "Exclusive Athlete Portal · SYNERGIA ALL STARS")}
+            </span>
+            <span className="rounded-md border border-[#9D5BB8]/45 bg-[#7E3D97]/25 px-2 py-0.5 text-[10px] font-bold text-purple-200">
+              {t("Usuario Estándar", "Standard User")}
+            </span>
+          </div>
           <h1 className="mt-1 text-2xl font-extrabold text-white">
             {athlete.fullName}
           </h1>

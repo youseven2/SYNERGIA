@@ -49,7 +49,8 @@ type CoachTab =
   | "solicitudes"
   | "eventos"
   | "asistencia"
-  | "metricas";
+  | "metricas"
+  | "usuarios";
 
 interface CoachDashboardProps {
   state: SynergiaState;
@@ -152,6 +153,16 @@ export function CoachDashboard({
   const [analytics, setAnalytics] = useState<AnalyticsState>(() =>
     loadAnalyticsState()
   );
+
+  // Gestión de Usuarios Administradores / Entrenadores
+  const [newSysFullName, setNewSysFullName] = useState("");
+  const [newSysUsername, setNewSysUsername] = useState("");
+  const [newSysPassword, setNewSysPassword] = useState("");
+  const [newSysRole, setNewSysRole] = useState<"Administrador" | "Entrenador">(
+    "Entrenador"
+  );
+  const [sysUserError, setSysUserError] = useState<string | null>(null);
+  const [sysUserSuccess, setSysUserSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeTab === "metricas" || activeTab === "menu") {
@@ -693,6 +704,66 @@ export function CoachDashboard({
     });
   }
 
+  function handleCreateSystemUser(e: FormEvent) {
+    e.preventDefault();
+    setSysUserError(null);
+    setSysUserSuccess(null);
+
+    const cleanUsername = newSysUsername.trim().toLowerCase();
+    if (!newSysFullName.trim() || !cleanUsername || !newSysPassword.trim()) {
+      setSysUserError(
+        t("Completa todos los campos obligatorios.", "Complete all required fields.")
+      );
+      return;
+    }
+
+    const exists = state.systemUsers.some(
+      (u) => u.username.toLowerCase() === cleanUsername
+    );
+    if (exists) {
+      setSysUserError(
+        t(
+          `El usuario "${cleanUsername}" ya existe en el sistema.`,
+          `Username "${cleanUsername}" already exists.`
+        )
+      );
+      return;
+    }
+
+    const created: SystemUser = {
+      username: cleanUsername,
+      password: newSysPassword.trim(),
+      role: newSysRole,
+      fullName: newSysFullName.trim(),
+      accessLevel: "admin",
+    };
+
+    commitState({
+      ...state,
+      systemUsers: [...state.systemUsers, created],
+    });
+
+    setNewSysFullName("");
+    setNewSysUsername("");
+    setNewSysPassword("");
+    setSysUserSuccess(
+      t(
+        `Usuario Administrador "${created.username}" (${created.role}) creado correctamente.`,
+        `Administrator user "${created.username}" (${created.role}) created successfully.`
+      )
+    );
+  }
+
+  function handleDeleteSystemUser(targetUsername: string) {
+    if (targetUsername.toLowerCase() === "admin") return;
+    commitState({
+      ...state,
+      systemUsers: state.systemUsers.filter(
+        (u) => u.username.toLowerCase() !== targetUsername.toLowerCase()
+      ),
+    });
+  }
+
   const deviceLabel =
     deviceType === "mobile"
       ? t("Celular", "Mobile")
@@ -718,7 +789,7 @@ export function CoachDashboard({
             </span>
             {currentUser && (
               <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-500/25">
-                {currentUser.username} ({currentUser.role})
+                {currentUser.username} · {currentUser.role} · {t("Usuario Administrador", "Admin User")}
               </span>
             )}
             <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-slate-300 border border-white/10">
@@ -1040,6 +1111,30 @@ export function CoachDashboard({
                 </p>
               </div>
             </button>
+
+            {/* 11. GESTIÓN DE USUARIOS ADMINISTRADORES Y ENTRENADORES */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("usuarios")}
+              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-amber-400/40 bg-gradient-to-r from-[#381B4C] via-[#0B1528] to-[#065F46] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-amber-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-amber-200">
+                  {state.systemUsers.length} {t("Admin / Entrenadores", "Admins / Coaches")} · {state.athletes.length} {t("Estándar", "Standard")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Usuarios Administradores y Entrenadores", "Administrator & Coach Users")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t("Crear cuentas con acceso total a configuración, contabilidad y eventos", "Create accounts with full access to settings, accounting & events")}
+                </p>
+              </div>
+            </button>
           </div>
         </section>
       ) : (
@@ -1106,6 +1201,11 @@ export function CoachDashboard({
                 key: "metricas",
                 label: t("Métricas", "Analytics"),
                 badge: analytics.totalVisits,
+              },
+              {
+                key: "usuarios",
+                label: t("Usuarios Admin", "Admin Users"),
+                badge: state.systemUsers.length,
               },
             ] as const
           ).map((tab) => (
@@ -2086,6 +2186,30 @@ export function CoachDashboard({
                 </p>
               </div>
             </button>
+
+            {/* 11. GESTIÓN DE USUARIOS ADMINISTRADORES Y ENTRENADORES */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("usuarios")}
+              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-amber-400/40 bg-gradient-to-r from-[#381B4C] via-[#0B1528] to-[#065F46] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-amber-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-amber-200">
+                  {state.systemUsers.length} {t("Admin / Entrenadores", "Admins / Coaches")} · {state.athletes.length} {t("Estándar", "Standard")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Usuarios Administradores y Entrenadores", "Administrator & Coach Users")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t("Crear cuentas con acceso total a configuración, contabilidad y eventos", "Create accounts with full access to settings, accounting & events")}
+                </p>
+              </div>
+            </button>
           </div>
         </section>
       )}
@@ -2616,6 +2740,30 @@ export function CoachDashboard({
                 </p>
               </div>
             </button>
+
+            {/* 11. GESTIÓN DE USUARIOS ADMINISTRADORES Y ENTRENADORES */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("usuarios")}
+              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-amber-400/40 bg-gradient-to-r from-[#381B4C] via-[#0B1528] to-[#065F46] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-amber-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-amber-200">
+                  {state.systemUsers.length} {t("Admin / Entrenadores", "Admins / Coaches")} · {state.athletes.length} {t("Estándar", "Standard")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Usuarios Administradores y Entrenadores", "Administrator & Coach Users")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t("Crear cuentas con acceso total a configuración, contabilidad y eventos", "Create accounts with full access to settings, accounting & events")}
+                </p>
+              </div>
+            </button>
           </div>
         </section>
       )}
@@ -2785,6 +2933,152 @@ export function CoachDashboard({
           </section>
         );
       })()}
+
+      {/* 11. GESTIÓN DE USUARIOS ADMINISTRADORES Y ENTRENADORES */}
+      {activeTab === "usuarios" && (
+        <section className="grid gap-6 lg:grid-cols-2">
+          <form
+            onSubmit={handleCreateSystemUser}
+            className="rounded-3xl border border-white/10 bg-[#0D1322] p-6 space-y-4"
+          >
+            <div>
+              <h2 className="text-lg font-bold text-white">
+                {t("Crear Usuario Administrador o Entrenador", "Create Administrator or Coach User")}
+              </h2>
+              <p className="mt-1 text-xs text-slate-400">
+                {t(
+                  "Los entrenadores y administradores tienen acceso completo a todos los módulos del sistema (contabilidad, pagos, eventos, reportes y usuarios). Los atletas son usuarios estándar.",
+                  "Coaches and administrators have full access to all system modules (accounting, payments, events, reports and users). Athletes are standard users."
+                )}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-200">
+                {t("Nombre Completo *", "Full Name *")}
+              </label>
+              <input
+                type="text"
+                required
+                value={newSysFullName}
+                onChange={(e) => setNewSysFullName(e.target.value)}
+                placeholder="Ej. Coach Daniela Pérez"
+                className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-semibold text-slate-200">
+                  {t("Rol Administrativo *", "Administrative Role *")}
+                </label>
+                <select
+                  value={newSysRole}
+                  onChange={(e) =>
+                    setNewSysRole(
+                      e.target.value as "Administrador" | "Entrenador"
+                    )
+                  }
+                  className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                >
+                  <option value="Entrenador">Entrenador (Acceso Admin)</option>
+                  <option value="Administrador">Administrador (Acceso Total)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-200">
+                  {t("Usuario *", "Username *")}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newSysUsername}
+                  onChange={(e) => setNewSysUsername(e.target.value)}
+                  placeholder="Ej. dperez"
+                  className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-200">
+                {t("Contraseña *", "Password *")}
+              </label>
+              <input
+                type="password"
+                required
+                value={newSysPassword}
+                onChange={(e) => setNewSysPassword(e.target.value)}
+                placeholder="••••••••"
+                className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
+              />
+            </div>
+
+            {sysUserError && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+                {sysUserError}
+              </div>
+            )}
+            {sysUserSuccess && (
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-200">
+                {sysUserSuccess}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full rounded-xl bg-[#00B7A4] py-3 text-sm font-bold text-slate-950 hover:bg-[#14CEBA] cursor-pointer"
+            >
+              {t("Crear Usuario Administrador", "Create Administrator User")}
+            </button>
+          </form>
+
+          <div className="rounded-3xl border border-white/10 bg-[#0D1322] p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">
+                {t("Usuarios del Sistema", "System Users")}
+              </h2>
+              <span className="rounded-lg bg-purple-500/20 px-2.5 py-1 text-[11px] font-bold text-purple-200">
+                {state.athletes.length} {t("Atletas (Estándar)", "Athletes (Standard)")}
+              </span>
+            </div>
+
+            <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+              {state.systemUsers.map((u) => (
+                <div
+                  key={u.username}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#070B14]/85 p-4 text-xs"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-bold text-white truncate">
+                        {u.fullName}
+                      </span>
+                      <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                        Usuario Administrador ({u.role})
+                      </span>
+                    </div>
+                    <p className="mt-1 font-mono text-amber-300">
+                      Usuario: {u.username}
+                    </p>
+                  </div>
+
+                  {u.username.toLowerCase() !== "admin" && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSystemUser(u.username)}
+                      className="shrink-0 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                    >
+                      {t("Eliminar", "Delete")}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* MODAL FLOTANTE: Visor de Flyer (Entrenador, sin descarga) */}
       {coachFlyerModal && (

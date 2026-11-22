@@ -112,6 +112,7 @@ export interface SystemUser {
   password: string;
   role: string;
   fullName: string;
+  accessLevel?: "admin" | "estandar";
 }
 
 export type PaymentMethod = "transferencia" | "pago_movil" | "efectivo";
@@ -270,6 +271,7 @@ export const DEFAULT_SYSTEM_USERS: SystemUser[] = [
     password: "Qwerty123.",
     role: "Administrador",
     fullName: "Administrador SYNERGIA",
+    accessLevel: "admin",
   },
 ];
 
