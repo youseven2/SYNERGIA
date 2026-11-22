@@ -113,6 +113,13 @@ export function CoachDashboard({
   const [citaFormId, setCitaFormId] = useState(
     state.forms[0]?.id ?? ""
   );
+  const [citaCategory, setCitaCategory] = useState<string>(CHEER_CATEGORIES[0]);
+  const [lastCitaWa, setLastCitaWa] = useState<{
+    athleteName: string;
+    phoneDisplay: string;
+    waUrl: string;
+    message: string;
+  } | null>(null);
 
   const [formalizeAppId, setFormalizeAppId] = useState<string | null>(null);
   const [formalizeCategory, setFormalizeCategory] = useState(
@@ -243,6 +250,7 @@ export function CoachDashboard({
   function handleSaveCita(e: FormEvent) {
     e.preventDefault();
     if (!citaAppId) return;
+    const citaApp = state.applications.find((a) => a.id === citaAppId);
     const updatedApps = state.applications.map((app) =>
       app.id === citaAppId
         ? {
@@ -251,16 +259,68 @@ export function CoachDashboard({
             appointmentDate: citaDate,
             appointmentTime: citaTime,
             assignedFormId: citaFormId || state.forms[0]?.id,
+            assignedCategory: citaCategory,
           }
         : app
     );
-    const citaApp = state.applications.find((a) => a.id === citaAppId);
     logAndCommit(
       { ...state, applications: updatedApps },
       "MODIFICACION",
       "Inscripción",
-      `Cita de evaluación asignada a ${citaApp?.fullName ?? citaAppId} (${citaDate} ${citaTime}).`
+      `Cita de evaluación asignada a ${citaApp?.fullName ?? citaAppId} (${citaDate} ${citaTime} · ${citaCategory}).`
     );
+
+    if (citaApp) {
+      const rawPhone = (citaApp.repPhone || citaApp.phone || "").trim();
+      let digits = rawPhone.replace(/\D/g, "");
+      if (digits.startsWith("0")) {
+        digits = `58${digits.slice(1)}`;
+      }
+      const gymAddress = citaCategory.includes("Bellas Artes")
+        ? "Sede Bellas Artes · Galería de Arte Nacional, Caracas"
+        : citaCategory.includes("Los Dos Caminos")
+        ? "Sede Los Dos Caminos · Av. El Centro, Los Dos Caminos, Caracas"
+        : "Sede Los Dos Caminos (Av. El Centro) / Sede Bellas Artes (Galería de Arte Nacional), Caracas";
+
+      const recipientName =
+        citaApp.isMinor && citaApp.repName
+          ? citaApp.repName
+          : citaApp.fullName;
+
+      const citaMessage = [
+        "🌟 *SYNERGIA ALL STARS* 🌟",
+        "_Escuela Deportiva Exclusiva de Porrismo (Cheerleading)_",
+        "",
+        `Hola *${recipientName}*, te confirmamos que la cita de evaluación para el aspirante ha sido programada:`,
+        "",
+        `• *Aspirante:* ${citaApp.fullName}`,
+        `• *Código:* ${citaApp.trackingCode}`,
+        `• *Categoría:* ${citaCategory}`,
+        `• *Día de presentación:* ${citaDate}`,
+        `• *Hora:* ${citaTime}`,
+        `• *Dirección del gimnasio:* ${gymAddress}`,
+        "",
+        "👕 Por favor asistir 10 minutos antes con ropa deportiva cómoda, calzado deportivo e hidratación.",
+        "",
+        "¡Te esperamos en SYNERGIA ALL STARS! 💪✨",
+      ].join("\n");
+
+      const waUrl = `https://wa.me/${digits}?text=${encodeURIComponent(
+        citaMessage
+      )}`;
+
+      setLastCitaWa({
+        athleteName: citaApp.fullName,
+        phoneDisplay: rawPhone || "Sin teléfono registrado",
+        waUrl,
+        message: citaMessage,
+      });
+
+      if (digits.length >= 7 && typeof window !== "undefined") {
+        window.open(waUrl, "_blank", "noopener,noreferrer");
+      }
+    }
+
     setCitaAppId(null);
     setCitaDate("");
     setCitaTime("");
@@ -1623,6 +1683,49 @@ export function CoachDashboard({
               </p>
             </div>
           </div>
+
+          {lastCitaWa && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-emerald-400/45 bg-emerald-500/15 p-4 text-xs text-emerald-100">
+              <div className="space-y-1">
+                <p className="text-sm font-extrabold text-emerald-300">
+                  {t(
+                    `Cita asignada · Aviso WhatsApp listo para ${lastCitaWa.athleteName}`,
+                    `Appointment scheduled · WhatsApp notice ready for ${lastCitaWa.athleteName}`
+                  )}
+                </p>
+                <p className="text-slate-200">
+                  {t("Teléfono registrado en INSCRIBETE:", "Phone from registration:")}{" "}
+                  <strong className="font-mono">{lastCitaWa.phoneDisplay}</strong>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={lastCitaWa.waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-extrabold text-slate-950 hover:bg-emerald-400 transition-colors"
+                >
+                  📲 {t("Enviar Cita por WhatsApp", "Send Appointment via WhatsApp")}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(lastCitaWa.message);
+                  }}
+                  className="rounded-xl border border-white/20 bg-white/5 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10 cursor-pointer"
+                >
+                  {t("Copiar Mensaje", "Copy Message")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLastCitaWa(null)}
+                  className="rounded-xl px-2.5 py-2 text-xs text-slate-300 hover:text-white cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
 
           {state.applications.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-10 text-center text-slate-400">
@@ -4087,6 +4190,22 @@ export function CoachDashboard({
                   className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-sm text-white [color-scheme:dark]"
                 />
               </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-200">
+                Categoría / Sede asignada *
+              </label>
+              <select
+                value={citaCategory}
+                onChange={(e) => setCitaCategory(e.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2.5 text-sm text-white"
+              >
+                {CHEER_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-200">
