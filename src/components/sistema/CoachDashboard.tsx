@@ -69,6 +69,28 @@ export function CoachDashboard({
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<CoachTab>("menu");
 
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      try {
+        const savedTab = window.sessionStorage.getItem(
+          "synergia_coach_active_tab"
+        ) as CoachTab | null;
+        if (savedTab) setActiveTab(savedTab);
+      } catch {
+        // ignore storage errors
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem("synergia_coach_active_tab", activeTab);
+    } catch {
+      // ignore storage errors
+    }
+  }, [activeTab]);
+
   // Sincronización automática de recordatorios de pago los días 5, 10 y 15 de cada mes
   useEffect(() => {
     const raf = requestAnimationFrame(() => {

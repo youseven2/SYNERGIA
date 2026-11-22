@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -17,10 +17,19 @@ import { AthletePortal } from "@/components/sistema/AthletePortal";
 import { useI18n } from "@/components/I18nContext";
 import { useDevice } from "@/components/DeviceContext";
 
+const SESSION_STORAGE_KEY = "synergia_active_session_v1";
+const COACH_TAB_STORAGE_KEY = "synergia_coach_active_tab";
+const INACTIVITY_LIMIT_MS = 10 * 60 * 1000; // 10 minutos
+
 type SessionMode =
   | { type: "none" }
   | { type: "coach"; user: SystemUser }
   | { type: "athlete"; athleteId: string };
+
+interface StoredSessionPayload {
+  session: SessionMode;
+  lastActivity: number;
+}
 
 export default function SistemaPage() {
   const [state, setState] = useState<SynergiaState | null>(null);
@@ -32,13 +41,146 @@ export default function SistemaPage() {
 
   const { t } = useI18n();
   const { deviceType, isMobile } = useDevice();
+  const lastActivityRef = useRef<number>(0);
+
+  const persistSession = useCallback((nextSession: SessionMode) => {
+    if (typeof window === "undefined") return;
+    if (nextSession.type === "none") {
+      window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      window.sessionStorage.removeItem(COACH_TAB_STORAGE_KEY);
+      return;
+    }
+    const now = Date.now();
+    lastActivityRef.current = now;
+    const payload: StoredSessionPayload = { session: nextSession, lastActivity: now };
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(payload));
+  }, []);
+
+  const handleLogout = useCallback(
+    (inactivityReason?: string) => {
+      persistSession({ type: "none" });
+      setSession({ type: "none" });
+      setUsername("");
+      setPassword("");
+      setLoginError(inactivityReason ?? null);
+    },
+    [persistSession]
+  );
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
-      setState(loadSynergiaState());
+      const loadedState = loadSynergiaState();
+      setState(loadedState);
+
+      try {
+        const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as StoredSessionPayload;
+        if (!parsed?.session || parsed.session.type === "none") {
+          window.localStorage.removeItem(SESSION_STORAGE_KEY);
+          return;
+        }
+
+        const now = Date.now();
+        if (now - parsed.lastActivity >= INACTIVITY_LIMIT_MS) {
+          window.localStorage.removeItem(SESSION_STORAGE_KEY);
+          window.sessionStorage.removeItem(COACH_TAB_STORAGE_KEY);
+          setLoginError(
+            t(
+              "Tu sesión se cerró automáticamente por seguridad tras 10 minutos de inactividad.",
+              "Your session was automatically closed after 10 minutes of inactivity for security."
+            )
+          );
+          return;
+        }
+
+        if (parsed.session.type === "coach") {
+          const savedUsername = parsed.session.user.username.toLowerCase();
+          const validCoach = loadedState.systemUsers.find(
+            (u) => u.username.toLowerCase() === savedUsername
+          );
+          if (validCoach) {
+            const restored: SessionMode = { type: "coach", user: validCoach };
+            persistSession(restored);
+            setSession(restored);
+            return;
+          }
+        } else if (parsed.session.type === "athlete") {
+          const savedAthleteId = parsed.session.athleteId;
+          const validAthlete = loadedState.athletes.find(
+            (a) => a.athleteId === savedAthleteId
+          );
+          if (validAthlete) {
+            const restored: SessionMode = {
+              type: "athlete",
+              athleteId: validAthlete.athleteId,
+            };
+            persistSession(restored);
+            setSession(restored);
+            return;
+          }
+        }
+
+        window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      } catch {
+        window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
     });
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [persistSession, t]);
+
+  // Cierre automático de sesión por inactividad (> 10 minutos)
+  useEffect(() => {
+    if (session.type === "none") return;
+
+    lastActivityRef.current = Date.now();
+    let lastSynced = Date.now();
+
+    const recordActivity = () => {
+      const now = Date.now();
+      lastActivityRef.current = now;
+      if (now - lastSynced >= 5000) {
+        lastSynced = now;
+        try {
+          const payload: StoredSessionPayload = { session, lastActivity: now };
+          window.localStorage.setItem(
+            SESSION_STORAGE_KEY,
+            JSON.stringify(payload)
+          );
+        } catch {
+          // ignore storage errors
+        }
+      }
+    };
+
+    const events: Array<keyof WindowEventMap> = [
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "touchstart",
+      "scroll",
+      "click",
+    ];
+    events.forEach((ev) =>
+      window.addEventListener(ev, recordActivity, { passive: true })
+    );
+
+    const intervalId = window.setInterval(() => {
+      if (Date.now() - lastActivityRef.current >= INACTIVITY_LIMIT_MS) {
+        handleLogout(
+          t(
+            "Tu sesión se cerró automáticamente por seguridad tras 10 minutos de inactividad.",
+            "Your session was automatically closed after 10 minutes of inactivity for security."
+          )
+        );
+      }
+    }, 15000);
+
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, recordActivity));
+      window.clearInterval(intervalId);
+    };
+  }, [session, handleLogout, t]);
 
   function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -66,7 +208,12 @@ export default function SistemaPage() {
       cleanPass
     );
     if (authenticatedSystemUser) {
-      setSession({ type: "coach", user: authenticatedSystemUser });
+      const nextSession: SessionMode = {
+        type: "coach",
+        user: authenticatedSystemUser,
+      };
+      persistSession(nextSession);
+      setSession(nextSession);
       return;
     }
 
@@ -77,7 +224,12 @@ export default function SistemaPage() {
         a.password.trim() === cleanPass
     );
     if (foundAthlete) {
-      setSession({ type: "athlete", athleteId: foundAthlete.athleteId });
+      const nextSession: SessionMode = {
+        type: "athlete",
+        athleteId: foundAthlete.athleteId,
+      };
+      persistSession(nextSession);
+      setSession(nextSession);
       return;
     }
 
@@ -99,13 +251,6 @@ export default function SistemaPage() {
     };
     saveSynergiaState(nextState);
     setState(nextState);
-  }
-
-  function handleLogout() {
-    setSession({ type: "none" });
-    setUsername("");
-    setPassword("");
-    setLoginError(null);
   }
 
   if (!state) {
@@ -144,7 +289,7 @@ export default function SistemaPage() {
           <CoachDashboard
             state={state}
             onStateChange={setState}
-            onLogout={handleLogout}
+            onLogout={() => handleLogout()}
             currentUser={session.user}
           />
         ) : session.type === "athlete" && activeAthlete ? (
@@ -153,7 +298,7 @@ export default function SistemaPage() {
             state={state}
             onStateChange={setState}
             onUpdateAthlete={handleUpdateAthlete}
-            onLogout={handleLogout}
+            onLogout={() => handleLogout()}
           />
         ) : (
           <div
