@@ -5,58 +5,61 @@ import { AthleteProfile, RegistrationApplication } from "./synergia-store";
 import { AnalyticsState, formatDuration } from "./analytics-store";
 
 function drawSynergiaLetterhead(doc: jsPDF, subtitle: string): void {
-  // Marco sutil de hoja membretada
+  // Marco doble ejecutivo de hoja membretada
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.5);
+  doc.rect(7, 7, 196, 283);
   doc.setDrawColor(226, 232, 240);
-  doc.setLineWidth(0.4);
-  doc.rect(8, 8, 194, 281);
+  doc.setLineWidth(0.25);
+  doc.rect(9, 9, 192, 279);
 
   // Cabecera membretada oficial SYNERGIA ALL STARS
   doc.setFillColor(7, 11, 20);
-  doc.rect(8, 8, 194, 34, "F");
+  doc.rect(9, 9, 192, 33, "F");
 
-  // Acento lateral morado + turquesa
+  // Acento lateral izquierdo morado + turquesa
   doc.setFillColor(126, 61, 151);
-  doc.rect(8, 8, 4, 34, "F");
+  doc.rect(9, 9, 4.5, 33, "F");
   doc.setFillColor(0, 183, 164);
-  doc.rect(12, 8, 2, 34, "F");
+  doc.rect(13.5, 9, 2, 33, "F");
 
   // Franja dual inferior turquesa y morado del logo
   doc.setFillColor(0, 183, 164);
-  doc.rect(8, 42, 118, 2.2, "F");
+  doc.rect(9, 42, 115, 2.4, "F");
   doc.setFillColor(126, 61, 151);
-  doc.rect(126, 42, 76, 2.2, "F");
+  doc.rect(124, 42, 77, 2.4, "F");
 
-  // Título principal
-  doc.setTextColor(0, 183, 164);
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text("SYNERGIA ALL STARS", 19, 21);
-
-  doc.setTextColor(241, 245, 249);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Club Deportivo de Porrismo · ${subtitle}`, 19, 28);
-
-  doc.setTextColor(148, 163, 184);
-  doc.setFontSize(7.8);
-  doc.text(
-    "Sedes: Los Dos Caminos (Av. El Centro) / Bellas Artes (GAN) · Caracas, Venezuela",
-    19,
-    35.5
-  );
-
-  // Insignia derecha en cabecera
+  // Emblema circular derecho
   doc.setFillColor(126, 61, 151);
-  doc.roundedRect(162, 14, 34, 10, 2, 2, "F");
+  doc.roundedRect(158, 13.5, 37, 9.5, 2, 2, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
-  doc.text("ALL STAR CLUB", 179, 20.5, { align: "center" });
+  doc.text("ALL STAR CLUB", 176.5, 19.8, { align: "center" });
+
+  // Título principal y subtítulo
+  doc.setTextColor(0, 183, 164);
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text("SYNERGIA ALL STARS", 20, 20.5);
+
+  doc.setTextColor(241, 245, 249);
+  doc.setFontSize(9.8);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Club Deportivo Exclusivo de Porrismo · ${subtitle}`, 20, 27.5);
+
+  doc.setTextColor(148, 163, 184);
+  doc.setFontSize(7.6);
+  doc.text(
+    "Sedes: Los Dos Caminos (Av. El Centro) / Bellas Artes (GAN) · Caracas, Venezuela",
+    20,
+    35.5
+  );
 
   doc.setTextColor(148, 163, 184);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.text(`Emisión: ${new Date().toLocaleDateString("es-ES")}`, 196, 35.5, {
+  doc.setFontSize(7.2);
+  doc.text(`Emisión: ${new Date().toLocaleDateString("es-ES")}`, 195, 35.5, {
     align: "right",
   });
 }
@@ -438,42 +441,97 @@ export function generateAthletesListPdf(
   const doc = new jsPDF();
   drawSynergiaLetterhead(doc, "Listado Oficial de Atletas en la Academia");
 
+  // Título centrado separado del cintillo
   doc.setTextColor(15, 23, 42);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text(`Filtro de Categoría: ${categoryLabel}`, 14, 45);
-  doc.text(`Total de Atletas: ${athletes.length}`, 14, 51);
+  doc.setFontSize(13);
+  doc.text("LISTADO OFICIAL DE ATLETAS", 105, 53, { align: "center" });
+  doc.setDrawColor(0, 183, 164);
+  doc.setLineWidth(0.6);
+  doc.line(68, 55.5, 142, 55.5);
 
-  let y = 60;
-  doc.setFillColor(241, 245, 249);
-  doc.rect(14, y - 5, 182, 8, "F");
-  doc.setFontSize(9);
-  doc.text("#", 16, y);
-  doc.text("ID Oficial", 24, y);
-  doc.text("Nombre Completo", 58, y);
-  doc.text("Edad", 112, y);
-  doc.text("Categoría", 124, y);
-  doc.text("Teléfono", 168, y);
+  // Tarjeta resumen del filtro
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(14, 60, 182, 16, 2.5, 2.5, "FD");
+  doc.setFillColor(126, 61, 151);
+  doc.rect(14, 60, 2.5, 16, "F");
 
-  y += 7;
+  doc.setTextColor(15, 23, 42);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9.5);
+  doc.text(`Filtro de Categoría: ${categoryLabel}`, 20, 66.5);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
+  doc.text(`Total de Atletas Registrados: ${athletes.length}`, 20, 72.5);
+
+  const drawTableHeader = (startY: number) => {
+    doc.setFillColor(15, 23, 42);
+    doc.roundedRect(14, startY - 5.5, 182, 8.5, 1.5, 1.5, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.text("#", 16.5, startY);
+    doc.text("ID Oficial", 23, startY);
+    doc.text("Nombre Completo", 57, startY);
+    doc.text("Edad", 110, startY);
+    doc.text("Categoría", 122, startY);
+    doc.text("Teléfono", 166, startY);
+  };
+
+  let y = 86;
+  drawTableHeader(y);
+  y += 7;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.2);
 
   athletes.forEach((ath, idx) => {
-    if (y > 275) {
+    const idLines = doc.splitTextToSize(ath.athleteId, 32);
+    const nameLines = doc.splitTextToSize(ath.fullName, 50);
+    const catShort = ath.category.split("(")[0].trim();
+    const catLines = doc.splitTextToSize(catShort, 40);
+    const phoneStr = (ath.repPhone || ath.phone || "N/A").trim();
+    const phoneLines = doc.splitTextToSize(phoneStr, 28);
+
+    const maxLines = Math.max(
+      idLines.length,
+      nameLines.length,
+      catLines.length,
+      phoneLines.length
+    );
+    const rowHeight = Math.max(7.5, maxLines * 4.5 + 3);
+
+    if (y + rowHeight > 272) {
+      drawSynergiaFooter(doc);
       doc.addPage();
       drawSynergiaLetterhead(doc, "Listado Oficial de Atletas (Cont.)");
-      y = 46;
+      y = 56;
+      drawTableHeader(y);
+      y += 7;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.2);
     }
-    doc.text(String(idx + 1), 16, y);
-    doc.text(ath.athleteId.slice(0, 16), 24, y);
-    doc.text(ath.fullName.slice(0, 26), 58, y);
-    doc.text(`${ath.age}`, 112, y);
-    doc.text(ath.category.split("(")[0].trim().slice(0, 20), 124, y);
-    doc.text((ath.repPhone || ath.phone || "").slice(0, 15), 168, y);
-    y += 6.5;
+
+    if (idx % 2 === 0) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(14, y - 4.5, 182, rowHeight, "F");
+    }
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, y - 4.5 + rowHeight, 196, y - 4.5 + rowHeight);
+
+    doc.setTextColor(15, 23, 42);
+    doc.text(String(idx + 1), 16.5, y);
+    doc.text(idLines, 23, y);
+    doc.text(nameLines, 57, y);
+    doc.text(`${ath.age}`, 110, y);
+    doc.text(catLines, 122, y);
+    doc.text(phoneLines, 166, y);
+
+    y += rowHeight;
   });
 
+  drawSynergiaFooter(doc);
   doc.save(`Listado_Atletas_SYNERGIA_${athletes.length}.pdf`);
 }
 
