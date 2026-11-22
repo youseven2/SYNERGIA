@@ -8,6 +8,7 @@ import {
   SynergiaState,
   createRecordId,
   getAthletePaymentStatus,
+  loadSynergiaState,
   saveSynergiaState,
 } from "@/lib/synergia-store";
 import { useI18n } from "@/components/I18nContext";
@@ -62,29 +63,91 @@ export function AttendanceControl({
 
   const validateAndRecord = useCallback(
     (rawCode: string, method: "qr" | "manual") => {
-      const cleaned = rawCode
-        .trim()
-        .replace(/^SYNERGIA:/i, "")
-        .toUpperCase();
+      const normalize = (val: string) =>
+        val
+          .trim()
+          .replace(/^SYNERGIA:\s*/i, "")
+          .replace(/\s+/g, "")
+          .toUpperCase();
+
+      const cleaned = normalize(rawCode);
       if (!cleaned) return;
 
-      const targetAthlete = state.athletes.find(
-        (a) => a.athleteId.toUpperCase() === cleaned
-      );
+      // Sincronizar siempre con el estado más reciente guardado en localStorage
+      const freshState = loadSynergiaState();
+
+      const targetAthlete = freshState.athletes.find((a) => {
+        const athId = normalize(a.athleteId);
+        const docId = normalize(a.documentId || "");
+        const user = normalize(a.username || "");
+        const appId = normalize(a.applicationId || "");
+        return (
+          athId === cleaned ||
+          (docId && docId === cleaned) ||
+          (user && user === cleaned) ||
+          (appId && appId === cleaned) ||
+          cleaned.includes(athId)
+        );
+      });
 
       if (!targetAthlete) {
+        // Sincronizar también con aspirantes inscritos desde INSCRIBETE
+        const targetApp = freshState.applications.find((app) => {
+          const code = normalize(app.trackingCode || "");
+          const docId = normalize(app.documentId || "");
+          const appId = normalize(app.id || "");
+          return (
+            (code && code === cleaned) ||
+            (docId && docId === cleaned) ||
+            (appId && appId === cleaned)
+          );
+        });
+
+        if (targetApp) {
+          const now = new Date();
+          const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+          const record: AttendanceRecord = {
+            id: createRecordId("att"),
+            athleteId: targetApp.trackingCode,
+            athleteName: targetApp.fullName,
+            category: targetApp.assignedCategory || t("Aspirante Inscrito", "Registered Applicant"),
+            timestamp: now.toISOString(),
+            dateKey,
+            method,
+            recordedBy,
+          };
+          const nextState: SynergiaState = {
+            ...freshState,
+            attendanceRecords: [record, ...freshState.attendanceRecords],
+          };
+          saveSynergiaState(nextState);
+          onStateChange(nextState);
+          setFeedback({
+            type: "success",
+            title: t(
+              "ASISTENCIA VALIDADA (ASPIRANTE INSCRITO)",
+              "ATTENDANCE VALIDATED (REGISTERED APPLICANT)"
+            ),
+            detail: t(
+              `${targetApp.fullName} (${targetApp.trackingCode}) · ${record.category} — Registrado en práctica.`,
+              `${targetApp.fullName} (${targetApp.trackingCode}) · ${record.category} — Checked in for practice.`
+            ),
+          });
+          return;
+        }
+
         setFeedback({
           type: "rejected",
           title: t("Carnet no encontrado", "ID Card not found"),
           detail: t(
-            `No existe ningún atleta formalizado con el ID "${cleaned}".`,
-            `No formalized athlete found with ID "${cleaned}".`
+            `No existe ningún atleta o aspirante registrado con el ID "${cleaned}".`,
+            `No registered athlete or applicant found with ID "${cleaned}".`
           ),
         });
         return;
       }
 
-      const payStatus = getAthletePaymentStatus(state, targetAthlete);
+      const payStatus = getAthletePaymentStatus(freshState, targetAthlete);
 
       if (payStatus.isSuspended) {
         setFeedback({
@@ -131,8 +194,8 @@ export function AttendanceControl({
       };
 
       const nextState: SynergiaState = {
-        ...state,
-        attendanceRecords: [record, ...state.attendanceRecords],
+        ...freshState,
+        attendanceRecords: [record, ...freshState.attendanceRecords],
       };
       saveSynergiaState(nextState);
       onStateChange(nextState);
@@ -146,7 +209,7 @@ export function AttendanceControl({
         ),
       });
     },
-    [onStateChange, recordedBy, state, t]
+    [onStateChange, recordedBy, t]
   );
 
   async function startCameraScanner() {
@@ -203,7 +266,7 @@ export function AttendanceControl({
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const code = jsQR(imgData.data, imgData.width, imgData.height, {
-          inversionAttempts: "dontInvert",
+          inversionAttempts: "attemptBoth",
         });
         if (code && code.data) {
           stopCamera();
@@ -298,18 +361,42 @@ export function AttendanceControl({
 
         {/* Ingreso manual del ID del Carnet */}
         <form onSubmit={handleManualSubmit} className="space-y-3 border-t border-white/10 pt-4">
-          <label className="block text-xs font-semibold text-slate-200">
-            {t("O ingresa el ID del Carnet manualmente", "Or enter ID Card number manually")}
-          </label>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label className="block text-xs font-semibold text-slate-200">
+              {t("O ingresa el ID del Carnet manualmente", "Or enter ID Card number manually")}
+            </label>
+            {!restrictedAthlete && (
+              <span className="text-[10px] font-semibold text-emerald-300">
+                {state.athletes.length} {t("atletas", "athletes")} · {state.applications.length} {t("inscritos sincronizados", "synced")}
+              </span>
+            )}
+          </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
               required
+              list={restrictedAthlete ? undefined : "synced-athlete-ids"}
               value={manualId}
               onChange={(e) => setManualId(e.target.value)}
               placeholder="Ej. V-28450123-001"
               className="flex-1 rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm font-mono text-white focus:border-[#00B7A4] focus:outline-none"
             />
+            {!restrictedAthlete && (
+              <datalist id="synced-athlete-ids">
+                {state.athletes.map((a) => (
+                  <option key={a.athleteId} value={a.athleteId}>
+                    {a.fullName} · {a.category}
+                  </option>
+                ))}
+                {state.applications
+                  .filter((app) => app.status !== "formalizado")
+                  .map((app) => (
+                    <option key={app.id} value={app.trackingCode}>
+                      {app.fullName} · {t("Inscrito", "Applicant")}
+                    </option>
+                  ))}
+              </datalist>
+            )}
             <button
               type="submit"
               className="rounded-xl bg-[#00B7A4] px-5 py-2.5 text-xs font-bold text-slate-950 hover:bg-[#14CEBA] cursor-pointer shrink-0"
