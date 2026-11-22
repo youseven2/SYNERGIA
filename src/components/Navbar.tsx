@@ -175,7 +175,7 @@ export function Navbar() {
 
           <nav className="hidden lg:flex lg:flex-1 lg:justify-center items-center gap-6 text-sm font-semibold text-slate-200">
             <Link
-              href="/#inicio"
+              href="/"
               onClick={() => recordSectionView("Inicio")}
               className="hover:text-[#00B7A4] transition-colors"
             >
@@ -319,7 +319,7 @@ export function Navbar() {
         {menuOpen && (
           <div className="lg:hidden border-t border-white/10 bg-[#070B14] px-4 py-4 space-y-3">
             <Link
-              href="/#inicio"
+              href="/"
               onClick={() => setMenuOpen(false)}
               className="block py-2 text-sm font-semibold text-slate-200 hover:text-[#00B7A4]"
             >
