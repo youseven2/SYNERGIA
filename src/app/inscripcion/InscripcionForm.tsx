@@ -33,6 +33,15 @@ export function InscripcionForm() {
   const [notes, setNotes] = useState("");
   const [submittedCode, setSubmittedCode] = useState<string | null>(null);
 
+  function sanitizeVePhoneLocal(raw: string): string {
+    let digits = raw.replace(/\D/g, "");
+    if (digits.startsWith("58") && digits.length > 10) {
+      digits = digits.slice(2);
+    }
+    digits = digits.replace(/^0+/, "");
+    return digits.slice(0, 10);
+  }
+
   // Si es menor de 9 años, usa automáticamente la cédula del representante
   const effectiveAthleteDocumentId = isUnderNine ? repDocumentId : documentId;
 
@@ -41,6 +50,9 @@ export function InscripcionForm() {
     if (age === null) return;
 
     const trackingCode = `SAS-${Math.floor(100000 + Math.random() * 900000)}`;
+    const formattedRepPhone = repPhone.trim() ? `+58${repPhone.trim()}` : "";
+    const formattedAthletePhone = phone.trim() ? `+58${phone.trim()}` : "";
+
     const newApp: RegistrationApplication = {
       id: `app-${Date.now()}`,
       trackingCode,
@@ -52,12 +64,12 @@ export function InscripcionForm() {
       repName: isMinor ? repName.trim() : undefined,
       repDocumentId: isMinor ? repDocumentId.trim() : undefined,
       repRelationship: isMinor ? repRelationship : undefined,
-      repPhone: isMinor ? repPhone.trim() : undefined,
+      repPhone: isMinor ? formattedRepPhone : undefined,
       repEmail: isMinor ? repEmail.trim() : undefined,
       fullName: fullName.trim(),
       documentId: effectiveAthleteDocumentId.trim(),
       email: (isMinor ? repEmail : email).trim(),
-      phone: (isMinor ? repPhone : phone).trim(),
+      phone: isMinor ? formattedRepPhone : formattedAthletePhone,
       notes: notes.trim(),
       status: "nuevo",
     };
@@ -301,15 +313,28 @@ export function InscripcionForm() {
               >
                 Teléfono / WhatsApp del representante *
               </label>
-              <input
-                id="repPhone"
-                type="tel"
-                required
-                value={repPhone}
-                onChange={(e) => setRepPhone(e.target.value)}
-                placeholder="+58 412 000 0000"
-                className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
-              />
+              <div className="mt-1.5 flex items-center overflow-hidden rounded-xl border border-white/15 bg-[#070B14] focus-within:border-emerald-400">
+                <span className="shrink-0 border-r border-white/15 bg-white/5 px-3 py-3 text-xs font-extrabold text-emerald-300 select-none">
+                  🇻🇪 +58
+                </span>
+                <input
+                  id="repPhone"
+                  type="tel"
+                  inputMode="numeric"
+                  required
+                  minLength={10}
+                  maxLength={10}
+                  pattern="[1-9][0-9]{9}"
+                  title="Ingresa 10 dígitos sin el 0 inicial (ej: 4121234567)"
+                  value={repPhone}
+                  onChange={(e) => setRepPhone(sanitizeVePhoneLocal(e.target.value))}
+                  placeholder="412 123 4567 (sin el 0 inicial)"
+                  className="w-full bg-transparent px-3.5 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none"
+                />
+              </div>
+              <p className="mt-1 text-[11px] text-slate-400">
+                Coloca tu número sin el 0 al principio (ej. 4121234567).
+              </p>
             </div>
 
             <div>
@@ -431,15 +456,28 @@ export function InscripcionForm() {
                 >
                   Teléfono / WhatsApp *
                 </label>
-                <input
-                  id="phone"
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+58 412 000 0000"
-                  className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
-                />
+                <div className="mt-1.5 flex items-center overflow-hidden rounded-xl border border-white/15 bg-[#070B14] focus-within:border-emerald-400">
+                  <span className="shrink-0 border-r border-white/15 bg-white/5 px-3 py-3 text-xs font-extrabold text-emerald-300 select-none">
+                    🇻🇪 +58
+                  </span>
+                  <input
+                    id="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    required
+                    minLength={10}
+                    maxLength={10}
+                    pattern="[1-9][0-9]{9}"
+                    title="Ingresa 10 dígitos sin el 0 inicial (ej: 4121234567)"
+                    value={phone}
+                    onChange={(e) => setPhone(sanitizeVePhoneLocal(e.target.value))}
+                    placeholder="412 123 4567 (sin el 0 inicial)"
+                    className="w-full bg-transparent px-3.5 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none"
+                  />
+                </div>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Coloca tu número sin el 0 al principio (ej. 4121234567).
+                </p>
               </div>
             </>
           )}
