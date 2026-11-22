@@ -5,32 +5,76 @@ import { AthleteProfile, RegistrationApplication } from "./synergia-store";
 import { AnalyticsState, formatDuration } from "./analytics-store";
 
 function drawSynergiaLetterhead(doc: jsPDF, subtitle: string): void {
+  // Marco sutil de hoja membretada
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.4);
+  doc.rect(8, 8, 194, 281);
+
   // Cabecera membretada oficial SYNERGIA ALL STARS
   doc.setFillColor(7, 11, 20);
-  doc.rect(0, 0, 210, 34, "F");
+  doc.rect(8, 8, 194, 34, "F");
 
-  // Franja dual turquesa y morado del logo
-  doc.setFillColor(0, 183, 164);
-  doc.rect(0, 34, 125, 2.2, "F");
+  // Acento lateral morado + turquesa
   doc.setFillColor(126, 61, 151);
-  doc.rect(125, 34, 85, 2.2, "F");
+  doc.rect(8, 8, 4, 34, "F");
+  doc.setFillColor(0, 183, 164);
+  doc.rect(12, 8, 2, 34, "F");
 
+  // Franja dual inferior turquesa y morado del logo
+  doc.setFillColor(0, 183, 164);
+  doc.rect(8, 42, 118, 2.2, "F");
+  doc.setFillColor(126, 61, 151);
+  doc.rect(126, 42, 76, 2.2, "F");
+
+  // Título principal
   doc.setTextColor(0, 183, 164);
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text("SYNERGIA ALL STARS", 14, 15);
+  doc.text("SYNERGIA ALL STARS", 19, 21);
 
-  doc.setTextColor(226, 232, 240);
+  doc.setTextColor(241, 245, 249);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(`Club Deportivo de Porrismo · ${subtitle}`, 14, 22);
+  doc.text(`Club Deportivo de Porrismo · ${subtitle}`, 19, 28);
 
   doc.setTextColor(148, 163, 184);
-  doc.setFontSize(8);
+  doc.setFontSize(7.8);
   doc.text(
-    "Sedes: Los Dos Caminos (Av. El Centro) / Bellas Artes (GAN) · Caracas",
-    14,
-    29
+    "Sedes: Los Dos Caminos (Av. El Centro) / Bellas Artes (GAN) · Caracas, Venezuela",
+    19,
+    35.5
+  );
+
+  // Insignia derecha en cabecera
+  doc.setFillColor(126, 61, 151);
+  doc.roundedRect(162, 14, 34, 10, 2, 2, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.text("ALL STAR CLUB", 179, 20.5, { align: "center" });
+
+  doc.setTextColor(148, 163, 184);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.text(`Emisión: ${new Date().toLocaleDateString("es-ES")}`, 196, 35.5, {
+    align: "right",
+  });
+}
+
+function drawSynergiaFooter(doc: jsPDF): void {
+  doc.setFillColor(0, 183, 164);
+  doc.rect(8, 281, 118, 1.5, "F");
+  doc.setFillColor(126, 61, 151);
+  doc.rect(126, 281, 76, 1.5, "F");
+
+  doc.setTextColor(100, 116, 139);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.text(
+    "SYNERGIA ALL STARS · Documento Oficial · Escuela Exclusiva de Porrismo",
+    105,
+    286.5,
+    { align: "center" }
   );
 }
 
@@ -40,104 +84,159 @@ export function generateEvaluationPdf(app: RegistrationApplication): void {
   const doc = new jsPDF();
   const ev = app.evaluation;
 
-  // Header
-  doc.setFillColor(7, 11, 20);
-  doc.rect(0, 0, 210, 32, "F");
+  drawSynergiaLetterhead(doc, "Reporte Oficial de Evaluación Deportiva");
 
-  doc.setTextColor(16, 185, 129);
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text("SYNERGIA ALL STARS", 14, 15);
+  // Tarjeta de Datos del Aspirante
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(14, 50, 182, app.isMinor && app.repName ? 44 : 38, 3, 3, "FD");
 
-  doc.setTextColor(226, 232, 240);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text("Escuela Exclusiva de Porrismo · Reporte de Evaluación", 14, 23);
+  // Barra lateral turquesa de la tarjeta
+  doc.setFillColor(0, 183, 164);
+  doc.rect(14, 50, 2.5, app.isMinor && app.repName ? 44 : 38, "F");
 
-  // Athlete info
   doc.setTextColor(15, 23, 42);
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Datos del Aspirante", 14, 44);
+  doc.text("DATOS DEL ASPIRANTE Y EVALUACIÓN", 20, 58);
 
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setFont("helvetica", "normal");
-  doc.text(`Nombre del Atleta: ${app.fullName}`, 14, 52);
-  doc.text(`Documento: ${app.documentId}   |   Edad: ${app.age} años`, 14, 58);
+  doc.text(`Nombre del Atleta: ${app.fullName}`, 20, 65);
+  doc.text(`Documento: ${app.documentId}   |   Edad: ${app.age} años`, 20, 71);
+  let infoY = 77;
   if (app.isMinor && app.repName) {
     doc.text(
-      `Representante: ${app.repName} (${app.repRelationship ?? "Representante"}) - Doc: ${app.repDocumentId ?? ""}`,
-      14,
-      64
+      `Representante: ${app.repName} (${app.repRelationship ?? "Representante"}) · Doc: ${app.repDocumentId ?? ""}`,
+      20,
+      infoY
     );
+    infoY += 6;
   }
-  doc.text(`Formulario: ${ev.formName}`, 14, 72);
-  doc.text(`Categoría del Formulario: ${ev.category}`, 14, 78);
+  doc.text(`Formulario: ${ev.formName}`, 20, infoY);
+  infoY += 6;
   doc.text(
-    `Fecha de Evaluación: ${new Date(ev.evaluatedAt).toLocaleString("es-ES")}`,
-    14,
-    84
+    `Categoría: ${ev.category}   |   Fecha: ${new Date(ev.evaluatedAt).toLocaleString("es-ES")}`,
+    20,
+    infoY
   );
 
-  // Table header
-  let y = 96;
-  doc.setFillColor(241, 245, 249);
-  doc.rect(14, y - 6, 182, 8, "F");
+  // Tabla de Criterios
+  let y = app.isMinor && app.repName ? 104 : 98;
+  doc.setFillColor(15, 23, 42);
+  doc.roundedRect(14, y - 6, 182, 9, 1.5, 1.5, "F");
+  doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.text("Actividad / Criterio", 16, y);
-  doc.text("Check", 122, y);
+  doc.setFontSize(9.5);
+  doc.text("Actividad / Criterio Evaluado", 18, y);
+  doc.text("Estado", 122, y);
   doc.text("Pond.", 148, y);
   doc.text("Nota", 174, y);
 
   y += 8;
   doc.setFont("helvetica", "normal");
+  doc.setTextColor(15, 23, 42);
 
-  ev.items.forEach((item) => {
-    if (y > 265) {
+  ev.items.forEach((item, index) => {
+    if (y > 235) {
+      drawSynergiaFooter(doc);
       doc.addPage();
-      y = 20;
+      drawSynergiaLetterhead(doc, "Reporte Oficial de Evaluación (Cont.)");
+      y = 54;
     }
-    const descLines = doc.splitTextToSize(item.description, 100);
-    doc.text(descLines, 16, y);
-    doc.text(item.checked ? "[X] Sí" : "[ ] No", 122, y);
+    const descLines = doc.splitTextToSize(item.description, 98);
+    const rowHeight = Math.max(8.5, descLines.length * 5 + 3.5);
+
+    if (index % 2 === 0) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(14, y - 5.2, 182, rowHeight, "F");
+    }
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, y - 5.2 + rowHeight, 196, y - 5.2 + rowHeight);
+
+    doc.setTextColor(15, 23, 42);
+    doc.text(descLines, 18, y);
+    if (item.checked) {
+      doc.setTextColor(5, 150, 105);
+      doc.setFont("helvetica", "bold");
+      doc.text("Cumplido", 122, y);
+    } else {
+      doc.setTextColor(100, 116, 139);
+      doc.setFont("helvetica", "normal");
+      doc.text("Pendiente", 122, y);
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(15, 23, 42);
     doc.text(`${item.weight} pts`, 148, y);
+    doc.setFont("helvetica", "bold");
     doc.text(`${item.score} pts`, 174, y);
-    y += Math.max(8, descLines.length * 5 + 3);
+    doc.setFont("helvetica", "normal");
+
+    y += rowHeight;
   });
 
-  // Total
-  y += 4;
-  doc.setDrawColor(16, 185, 129);
-  doc.line(14, y, 196, y);
-  y += 8;
+  // Caja de Calificación Total
+  y += 6;
+  const pct = ev.maxScore > 0 ? Math.round((ev.totalScore / ev.maxScore) * 100) : 0;
+  doc.setFillColor(240, 253, 250);
+  doc.setDrawColor(0, 183, 164);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(14, y, 182, app.assignedCategory || app.assignedPosition ? 22 : 14, 2.5, 2.5, "FD");
 
+  doc.setTextColor(15, 23, 42);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
+  doc.setFontSize(11.5);
   doc.text(
-    `CALIFICACIÓN TOTAL: ${ev.totalScore} / ${ev.maxScore} pts`,
-    14,
-    y
+    `CALIFICACIÓN TOTAL: ${ev.totalScore} / ${ev.maxScore} pts (${pct}%)`,
+    18,
+    y + 9
   );
 
   if (app.assignedCategory || app.assignedPosition) {
-    y += 8;
-    doc.setFontSize(10);
+    doc.setFontSize(9.5);
+    doc.setTextColor(71, 85, 105);
     doc.text(
       `Categoría asignada: ${app.assignedCategory ?? "Por definir"}   |   Posición: ${app.assignedPosition ?? "Por definir"}`,
-      14,
-      y
+      18,
+      y + 16.5
     );
+    y += 28;
+  } else {
+    y += 20;
   }
 
   if (ev.coachNotes) {
-    y += 10;
+    doc.setFillColor(250, 245, 255);
+    doc.setDrawColor(126, 61, 151);
+    doc.setLineWidth(0.4);
+    const notesLines = doc.splitTextToSize(ev.coachNotes, 170);
+    const boxH = Math.max(18, notesLines.length * 5 + 12);
+    doc.roundedRect(14, y, 182, boxH, 2.5, 2.5, "FD");
+    doc.setFillColor(126, 61, 151);
+    doc.rect(14, y, 2.5, boxH, "F");
+
+    doc.setTextColor(88, 28, 135);
     doc.setFont("helvetica", "bold");
-    doc.text("Observaciones del Entrenador:", 14, y);
-    y += 6;
+    doc.setFontSize(9.5);
+    doc.text("Observaciones del Entrenador:", 20, y + 7);
+    doc.setTextColor(30, 41, 59);
     doc.setFont("helvetica", "normal");
-    const notesLines = doc.splitTextToSize(ev.coachNotes, 180);
-    doc.text(notesLines, 14, y);
+    doc.text(notesLines, 20, y + 13);
   }
+
+  // Firmas oficiales
+  doc.setDrawColor(100, 116, 139);
+  doc.setLineWidth(0.35);
+  doc.line(22, 266, 88, 266);
+  doc.line(122, 266, 188, 266);
+  doc.setTextColor(51, 65, 85);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.text("Entrenador / Evaluador", 55, 271, { align: "center" });
+  doc.text("Dirección General SYNERGIA ALL STARS", 155, 271, { align: "center" });
+
+  drawSynergiaFooter(doc);
 
   const safeName = app.fullName.replace(/[^a-zA-Z0-9_-]/g, "_");
   doc.save(`Evaluacion_${safeName}.pdf`);
