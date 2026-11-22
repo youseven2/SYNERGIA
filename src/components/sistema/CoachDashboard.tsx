@@ -22,6 +22,7 @@ import {
   syncScheduledPaymentReminders,
 } from "@/lib/synergia-store";
 import {
+  generateAnalyticsPdf,
   generateAthleteProfilePdf,
   generateAthletesListPdf,
   generateEvaluationPdf,
@@ -2567,6 +2568,13 @@ export function CoachDashboard({
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => generateAnalyticsPdf(analytics)}
+                  className="rounded-xl border border-[#9D5BB8]/60 bg-[#7E3D97] px-4 py-2 text-xs font-bold text-white hover:bg-[#914BAE] cursor-pointer"
+                >
+                  {t("Reporte PDF (Membretado)", "PDF Report (Letterhead)")}
+                </button>
                 <button
                   type="button"
                   onClick={() => setAnalytics(loadAnalyticsState())}

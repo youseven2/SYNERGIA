@@ -2,6 +2,7 @@
 
 import { jsPDF } from "jspdf";
 import { AthleteProfile, RegistrationApplication } from "./synergia-store";
+import { AnalyticsState, formatDuration } from "./analytics-store";
 
 function drawSynergiaLetterhead(doc: jsPDF, subtitle: string): void {
   // Cabecera membretada oficial SYNERGIA ALL STARS
@@ -331,4 +332,111 @@ export function generateAthletesListPdf(
   });
 
   doc.save(`Listado_Atletas_SYNERGIA_${athletes.length}.pdf`);
+}
+
+export function generateAnalyticsPdf(analytics: AnalyticsState): void {
+  const doc = new jsPDF();
+  drawSynergiaLetterhead(doc, "Reporte Oficial de Estadísticas y Métricas Web");
+
+  const avgSeconds =
+    analytics.totalVisits > 0
+      ? analytics.totalDurationSeconds / analytics.totalVisits
+      : 0;
+  const rankedSections = Object.entries(analytics.sectionViews).sort(
+    (a, b) => b[1] - a[1]
+  );
+  const topSection = rankedSections[0] ?? ["Inicio", 0];
+  const rankedCountries = Object.entries(analytics.visitsByCountry).sort(
+    (a, b) => b[1] - a[1]
+  );
+  const totalCountryVisits = Math.max(
+    1,
+    rankedCountries.reduce((s, [, v]) => s + v, 0)
+  );
+
+  let y = 46;
+  doc.setTextColor(15, 23, 42);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("1. RESUMEN GENERAL DE MÉTRICAS", 14, y);
+  y += 8;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(`Fecha de Emisión: ${new Date().toLocaleString("es-ES")}`, 14, y);
+  y += 6;
+  doc.text(`Visitas Totales: ${analytics.totalVisits}`, 14, y);
+  y += 6;
+  doc.text(
+    `Tiempo Total de Duración en Página: ${formatDuration(analytics.totalDurationSeconds)}`,
+    14,
+    y
+  );
+  y += 6;
+  doc.text(
+    `Tiempo Promedio de Duración por Visita: ${formatDuration(avgSeconds)}`,
+    14,
+    y
+  );
+  y += 6;
+  doc.text(
+    `Contenido Más Visto: ${topSection[0]} (${topSection[1]} vistas)`,
+    14,
+    y
+  );
+
+  y += 12;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("2. CONTENIDO MÁS VISTO", 14, y);
+  y += 7;
+
+  doc.setFillColor(241, 245, 249);
+  doc.rect(14, y - 5, 182, 7, "F");
+  doc.setFontSize(9.5);
+  doc.text("Sección / Contenido", 16, y);
+  doc.text("Vistas", 168, y);
+  y += 7;
+
+  doc.setFont("helvetica", "normal");
+  rankedSections.forEach(([section, views]) => {
+    doc.text(section, 16, y);
+    doc.text(String(views), 168, y);
+    y += 6;
+  });
+
+  y += 8;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("3. VISITAS POR PAÍS", 14, y);
+  y += 7;
+
+  doc.setFillColor(241, 245, 249);
+  doc.rect(14, y - 5, 182, 7, "F");
+  doc.setFontSize(9.5);
+  doc.text("País / Región", 16, y);
+  doc.text("Visitas", 140, y);
+  doc.text("Porcentaje", 170, y);
+  y += 7;
+
+  doc.setFont("helvetica", "normal");
+  if (rankedCountries.length === 0) {
+    doc.text("Sin visitas registradas por país.", 16, y);
+    y += 6;
+  } else {
+    rankedCountries.forEach(([country, count]) => {
+      const pct = Math.round((count / totalCountryVisits) * 100);
+      doc.text(country, 16, y);
+      doc.text(String(count), 140, y);
+      doc.text(`${pct}%`, 170, y);
+      y += 6;
+    });
+  }
+
+  doc.setDrawColor(100, 116, 139);
+  doc.line(14, 265, 90, 265);
+  doc.setFontSize(8.5);
+  doc.text("Dirección General · SYNERGIA ALL STARS", 16, 270);
+
+  doc.save("Reporte_Estadisticas_SYNERGIA.pdf");
 }
