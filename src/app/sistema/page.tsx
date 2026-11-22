@@ -119,10 +119,6 @@ export default function SistemaPage() {
     );
   }
 
-  const newApplicantsCount = state.applications.filter(
-    (a) => a.status === "nuevo"
-  ).length;
-
   const activeAthlete =
     session.type === "athlete"
       ? state.athletes.find((a) => a.athleteId === session.athleteId) ?? null
@@ -181,15 +177,6 @@ export default function SistemaPage() {
                   {t("Vista adaptada para", "View adapted for")}: {deviceLabel}
                 </div>
               </div>
-
-              {newApplicantsCount > 0 && (
-                <div className="mt-5 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-center text-xs font-semibold text-amber-200">
-                  {t(
-                    `Aviso del sistema: hay ${newApplicantsCount} aspirante(s) nuevo(s) esperando cita en el módulo INSCRIPCION.`,
-                    `System notice: ${newApplicantsCount} new applicant(s) waiting for an appointment in the REGISTRATION module.`
-                  )}
-                </div>
-              )}
 
               <form onSubmit={handleLogin} className="mt-6 space-y-5">
                 <div>
