@@ -4,6 +4,7 @@ import { ChangeEvent, useEffect, useState, FormEvent } from "react";
 import {
   ActivityScore,
   AthleteProfile,
+  AuditActionType,
   CHEER_CATEGORIES,
   CHEER_POSITIONS,
   EvaluationActivity,
@@ -13,6 +14,7 @@ import {
   SynergiaEvent,
   SynergiaState,
   SystemUser,
+  appendAuditLog,
   createRecordId,
   generateAthleteId,
   generateAthleteUsername,
@@ -50,7 +52,8 @@ type CoachTab =
   | "eventos"
   | "asistencia"
   | "metricas"
-  | "usuarios";
+  | "usuarios"
+  | "auditoria";
 
 interface CoachDashboardProps {
   state: SynergiaState;
@@ -195,6 +198,11 @@ export function CoachDashboard({
     CHEER_POSITIONS[0]
   );
   const [promoteCategory, setPromoteCategory] = useState<string>(CHEER_CATEGORIES[0]);
+  const [deleteConfirmAth, setDeleteConfirmAth] = useState<AthleteProfile | null>(null);
+  const [deleteAuthPassword, setDeleteAuthPassword] = useState("");
+  const [deleteAuthError, setDeleteAuthError] = useState<string | null>(null);
+  const [auditSearch, setAuditSearch] = useState("");
+  const [auditActionFilter, setAuditActionFilter] = useState<AuditActionType | "TODOS">("TODOS");
 
   useEffect(() => {
     if (activeTab === "metricas" || activeTab === "menu") {
@@ -214,6 +222,23 @@ export function CoachDashboard({
     onStateChange(next);
   }
 
+  function logAndCommit(
+    next: SynergiaState,
+    action: AuditActionType,
+    moduleName: string,
+    detail: string
+  ) {
+    const logged = appendAuditLog(next, {
+      actorUsername: currentUser?.username ?? "admin",
+      actorName: currentUser?.fullName ?? "Administrador",
+      actorRole: currentUser?.role ?? "Administrador",
+      action,
+      module: moduleName,
+      detail,
+    });
+    commitState(logged);
+  }
+
   // --- INSCRIPCION ACTIONS ---
   function handleSaveCita(e: FormEvent) {
     e.preventDefault();
@@ -229,15 +254,27 @@ export function CoachDashboard({
           }
         : app
     );
-    commitState({ ...state, applications: updatedApps });
+    const citaApp = state.applications.find((a) => a.id === citaAppId);
+    logAndCommit(
+      { ...state, applications: updatedApps },
+      "MODIFICACION",
+      "Inscripción",
+      `Cita de evaluación asignada a ${citaApp?.fullName ?? citaAppId} (${citaDate} ${citaTime}).`
+    );
     setCitaAppId(null);
     setCitaDate("");
     setCitaTime("");
   }
 
   function handleDeleteApplication(appId: string) {
+    const targetApp = state.applications.find((a) => a.id === appId);
     const updatedApps = state.applications.filter((a) => a.id !== appId);
-    commitState({ ...state, applications: updatedApps });
+    logAndCommit(
+      { ...state, applications: updatedApps },
+      "ELIMINACION",
+      "Inscripción",
+      `Eliminación de solicitud de aspirante ${targetApp?.fullName ?? appId}.`
+    );
   }
 
   function handleGoToEvaluation(app: RegistrationApplication) {
@@ -323,11 +360,16 @@ export function CoachDashboard({
         : item
     );
 
-    commitState({
-      ...state,
-      applications: updatedApps,
-      athletes: [newAthlete, ...state.athletes],
-    });
+    logAndCommit(
+      {
+        ...state,
+        applications: updatedApps,
+        athletes: [newAthlete, ...state.athletes],
+      },
+      "CREACION",
+      "Inscripción",
+      `Formalización de inscripción: ${newAthlete.fullName} (${newAthlete.athleteId}) · Categoría: ${newAthlete.category}.`
+    );
 
     setFormalizeAppId(null);
     setSelectedAthleteId(newAthlete.athleteId);
@@ -475,14 +517,19 @@ export function CoachDashboard({
     );
     if (!targetAth) return;
 
-    commitState({
-      ...state,
-      athletes: state.athletes.map((a) =>
-        a.athleteId === targetAth.athleteId
-          ? { ...a, category: promoteCategory }
-          : a
-      ),
-    });
+    logAndCommit(
+      {
+        ...state,
+        athletes: state.athletes.map((a) =>
+          a.athleteId === targetAth.athleteId
+            ? { ...a, category: promoteCategory }
+            : a
+        ),
+      },
+      "MODIFICACION",
+      "Evaluación y PDF",
+      `Ascenso/cambio de categoría de ${targetAth.fullName} (${targetAth.athleteId}) a "${promoteCategory}".`
+    );
     setEvalSavedMsg(
       t(
         `Categoría de ${targetAth.fullName} actualizada a "${promoteCategory}".`,
@@ -567,7 +614,13 @@ export function CoachDashboard({
         : app
     );
 
-    commitState({ ...state, applications: updatedApps });
+    const evalApp = state.applications.find((a) => a.id === selectedEvalAppId);
+    logAndCommit(
+      { ...state, applications: updatedApps },
+      "EVALUACION",
+      "Evaluación y PDF",
+      `Evaluación guardada para ${evalApp?.fullName ?? selectedEvalAppId} (${totalScore}/${maxScore} pts · ${template.name}).`
+    );
     setEvalSavedMsg(
       `Evaluación guardada (${totalScore} / ${maxScore} pts). Ya puedes generar el reporte PDF.`
     );
@@ -636,13 +689,24 @@ export function CoachDashboard({
           }
         : p
     );
-    commitState({ ...state, payments: updated });
+    const targetPayment = state.payments.find((p) => p.id === paymentId);
+    logAndCommit(
+      { ...state, payments: updated },
+      "MODIFICACION",
+      "Contabilidad",
+      `Pago ${paymentId} (${targetPayment?.athleteName ?? ""}) marcado como ${decision}.`
+    );
   }
 
   function handleSaveMonthlyFee(e: FormEvent) {
     e.preventDefault();
     const val = Math.max(1, Number(feeInput) || 30);
-    commitState({ ...state, monthlyFee: val });
+    logAndCommit(
+      { ...state, monthlyFee: val },
+      "MODIFICACION",
+      "Contabilidad",
+      `Cuota mensual actualizada a $${val}.`
+    );
   }
 
   function handleSendPaymentNotification(athleteId: string, fullName: string) {
@@ -701,7 +765,13 @@ export function CoachDashboard({
     const updated = state.materialRequests.map((r) =>
       r.id === requestId ? { ...r, status: nextStatus } : r
     );
-    commitState({ ...state, materialRequests: updated });
+    const targetReq = state.materialRequests.find((r) => r.id === requestId);
+    logAndCommit(
+      { ...state, materialRequests: updated },
+      "MODIFICACION",
+      "Solicitudes",
+      `Solicitud de ${targetReq?.athleteName ?? requestId} (${targetReq?.itemType ?? ""}) actualizada a "${nextStatus}".`
+    );
   }
 
   // --- EVENTOS (SOLO ENTRENADORES) ---
@@ -774,11 +844,16 @@ export function CoachDashboard({
         ]
       : state.eventNotifications;
 
-    commitState({
-      ...state,
-      events: [newEv, ...state.events],
-      eventNotifications: nextNotifications,
-    });
+    logAndCommit(
+      {
+        ...state,
+        events: [newEv, ...state.events],
+        eventNotifications: nextNotifications,
+      },
+      "CREACION",
+      "Eventos",
+      `Publicación de evento "${newEv.title}" (${newEv.date}).`
+    );
 
     setEvTitle("");
     setEvDate("");
@@ -799,13 +874,19 @@ export function CoachDashboard({
   }
 
   function handleDeleteEvent(eventId: string) {
-    commitState({
-      ...state,
-      events: state.events.filter((ev) => ev.id !== eventId),
-      eventNotifications: state.eventNotifications.filter(
-        (n) => n.eventId !== eventId
-      ),
-    });
+    const targetEv = state.events.find((ev) => ev.id === eventId);
+    logAndCommit(
+      {
+        ...state,
+        events: state.events.filter((ev) => ev.id !== eventId),
+        eventNotifications: state.eventNotifications.filter(
+          (n) => n.eventId !== eventId
+        ),
+      },
+      "ELIMINACION",
+      "Eventos",
+      `Eliminación de evento "${targetEv?.title ?? eventId}".`
+    );
   }
 
   function handleCreateSystemUser(e: FormEvent) {
@@ -842,10 +923,15 @@ export function CoachDashboard({
       accessLevel: "admin",
     };
 
-    commitState({
-      ...state,
-      systemUsers: [...state.systemUsers, created],
-    });
+    logAndCommit(
+      {
+        ...state,
+        systemUsers: [...state.systemUsers, created],
+      },
+      "CREACION",
+      "Usuarios del Sistema",
+      `Creación de usuario ${created.role}: "${created.username}" (${created.fullName}).`
+    );
 
     setNewSysFullName("");
     setNewSysUsername("");
@@ -860,12 +946,17 @@ export function CoachDashboard({
 
   function handleDeleteSystemUser(targetUsername: string) {
     if (targetUsername.toLowerCase() === "admin") return;
-    commitState({
-      ...state,
-      systemUsers: state.systemUsers.filter(
-        (u) => u.username.toLowerCase() !== targetUsername.toLowerCase()
-      ),
-    });
+    logAndCommit(
+      {
+        ...state,
+        systemUsers: state.systemUsers.filter(
+          (u) => u.username.toLowerCase() !== targetUsername.toLowerCase()
+        ),
+      },
+      "ELIMINACION",
+      "Usuarios del Sistema",
+      `Eliminación de usuario administrador "${targetUsername}".`
+    );
   }
 
   function handleStartEditAthleteUser(ath: AthleteProfile) {
@@ -915,20 +1006,25 @@ export function CoachDashboard({
       return;
     }
 
-    commitState({
-      ...state,
-      athletes: state.athletes.map((a) =>
-        a.athleteId === editAthleteId
-          ? {
-              ...a,
-              username: cleanUser,
-              password: cleanPass,
-              category: editAthCategory,
-              position: editAthPosition,
-            }
-          : a
-      ),
-    });
+    logAndCommit(
+      {
+        ...state,
+        athletes: state.athletes.map((a) =>
+          a.athleteId === editAthleteId
+            ? {
+                ...a,
+                username: cleanUser,
+                password: cleanPass,
+                category: editAthCategory,
+                position: editAthPosition,
+              }
+            : a
+        ),
+      },
+      "MODIFICACION",
+      "Usuarios del Sistema",
+      `Modificación de atleta estándar (${editAthleteId}) · usuario "${cleanUser}", categoría "${editAthCategory}", posición "${editAthPosition}".`
+    );
     setEditAthleteId(null);
     setSysUserSuccess(
       t(
@@ -938,38 +1034,73 @@ export function CoachDashboard({
     );
   }
 
-  function handleDeleteAthleteUser(athleteId: string) {
+  function handleRequestDeleteAthleteUser(ath: AthleteProfile) {
     setSysUserError(null);
     setSysUserSuccess(null);
-    const targetAth = state.athletes.find((a) => a.athleteId === athleteId);
-    const targetAppId = targetAth?.applicationId || `APP-${athleteId}`;
+    setDeleteConfirmAth(ath);
+    setDeleteAuthPassword("");
+    setDeleteAuthError(null);
+  }
+
+  function handleConfirmDeleteAthleteUser(e: FormEvent) {
+    e.preventDefault();
+    if (!deleteConfirmAth) return;
+
+    const actorPassword =
+      currentUser?.password ??
+      state.systemUsers.find((u) => u.username.toLowerCase() === "admin")
+        ?.password ??
+      "admin";
+
+    if (deleteAuthPassword.trim() !== actorPassword.trim()) {
+      setDeleteAuthError(
+        t(
+          "Clave incorrecta. No se autorizó la eliminación del atleta.",
+          "Incorrect password. Athlete deletion was not authorized."
+        )
+      );
+      return;
+    }
+
+    const athleteId = deleteConfirmAth.athleteId;
+    const athleteName = deleteConfirmAth.fullName;
+    const targetAppId = deleteConfirmAth.applicationId || `APP-${athleteId}`;
 
     if (editAthleteId === athleteId) setEditAthleteId(null);
     if (selectedAthleteId === athleteId) setSelectedAthleteId("");
     if (selectedEvalAppId === targetAppId) setSelectedEvalAppId("");
     if (formalizeAppId === targetAppId) setFormalizeAppId("");
 
-    commitState({
-      ...state,
-      athletes: state.athletes.filter((a) => a.athleteId !== athleteId),
-      applications: state.applications.filter(
-        (app) => app.id !== targetAppId && app.trackingCode !== athleteId
-      ),
-      payments: state.payments.filter((p) => p.athleteId !== athleteId),
-      paymentNotifications: state.paymentNotifications.filter(
-        (n) => n.athleteId !== athleteId
-      ),
-      materialRequests: state.materialRequests.filter(
-        (r) => r.athleteId !== athleteId
-      ),
-      attendanceRecords: state.attendanceRecords.filter(
-        (r) => r.athleteId !== athleteId
-      ),
-    });
+    logAndCommit(
+      {
+        ...state,
+        athletes: state.athletes.filter((a) => a.athleteId !== athleteId),
+        applications: state.applications.filter(
+          (app) => app.id !== targetAppId && app.trackingCode !== athleteId
+        ),
+        payments: state.payments.filter((p) => p.athleteId !== athleteId),
+        paymentNotifications: state.paymentNotifications.filter(
+          (n) => n.athleteId !== athleteId
+        ),
+        materialRequests: state.materialRequests.filter(
+          (r) => r.athleteId !== athleteId
+        ),
+        attendanceRecords: state.attendanceRecords.filter(
+          (r) => r.athleteId !== athleteId
+        ),
+      },
+      "ELIMINACION",
+      "Usuarios del Sistema",
+      `Eliminación total autorizada con clave del atleta ${athleteName} (${athleteId}) y todos sus registros.`
+    );
+
+    setDeleteConfirmAth(null);
+    setDeleteAuthPassword("");
+    setDeleteAuthError(null);
     setSysUserSuccess(
       t(
-        "Usuario estándar y toda la información asociada al atleta eliminados del sistema.",
-        "Standard user and all associated athlete data deleted from the system."
+        `Usuario estándar ${athleteName} (${athleteId}) y toda su información fueron eliminados del sistema.`,
+        `Standard user ${athleteName} (${athleteId}) and all associated data were deleted from the system.`
       )
     );
   }
@@ -1345,6 +1476,33 @@ export function CoachDashboard({
                 </p>
               </div>
             </button>
+
+            {/* 12. AUDITORÍA Y LOGS DEL SISTEMA */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("auditoria")}
+              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-cyan-400/35 bg-gradient-to-r from-[#0B172A] via-[#131B2E] to-[#1E1B4B] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-cyan-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-cyan-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-cyan-200">
+                  {(state.auditLogs ?? []).length} {t("Registros", "Records")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Auditoría y Logs del Sistema", "System Audit & Logs")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t(
+                    "Historial con fecha y hora de ingresos, modificaciones y eliminaciones por usuario",
+                    "Date & time history of logins, modifications and deletions by user"
+                  )}
+                </p>
+              </div>
+            </button>
           </div>
         </section>
       ) : (
@@ -1416,6 +1574,11 @@ export function CoachDashboard({
                 key: "usuarios",
                 label: t("Usuarios Admin", "Admin Users"),
                 badge: state.systemUsers.length,
+              },
+              {
+                key: "auditoria",
+                label: t("Auditoría / Logs", "Audit Logs"),
+                badge: (state.auditLogs ?? []).length,
               },
             ] as const
           ).map((tab) => (
@@ -2513,6 +2676,33 @@ export function CoachDashboard({
                 </p>
               </div>
             </button>
+
+            {/* 12. AUDITORÍA Y LOGS DEL SISTEMA */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("auditoria")}
+              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-cyan-400/35 bg-gradient-to-r from-[#0B172A] via-[#131B2E] to-[#1E1B4B] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-cyan-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-cyan-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-cyan-200">
+                  {(state.auditLogs ?? []).length} {t("Registros", "Records")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Auditoría y Logs del Sistema", "System Audit & Logs")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t(
+                    "Historial con fecha y hora de ingresos, modificaciones y eliminaciones por usuario",
+                    "Date & time history of logins, modifications and deletions by user"
+                  )}
+                </p>
+              </div>
+            </button>
           </div>
         </section>
       )}
@@ -3105,6 +3295,33 @@ export function CoachDashboard({
                 </p>
               </div>
             </button>
+
+            {/* 12. AUDITORÍA Y LOGS DEL SISTEMA */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("auditoria")}
+              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-cyan-400/35 bg-gradient-to-r from-[#0B172A] via-[#131B2E] to-[#1E1B4B] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-cyan-300 cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <svg className="h-9 w-9 text-cyan-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+                </svg>
+                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-cyan-200">
+                  {(state.auditLogs ?? []).length} {t("Registros", "Records")}
+                </span>
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-extrabold text-white">
+                  {t("Auditoría y Logs del Sistema", "System Audit & Logs")}
+                </p>
+                <p className="text-[11px] text-slate-200/85">
+                  {t(
+                    "Historial con fecha y hora de ingresos, modificaciones y eliminaciones por usuario",
+                    "Date & time history of logins, modifications and deletions by user"
+                  )}
+                </p>
+              </div>
+            </button>
           </div>
         </section>
       )}
@@ -3479,7 +3696,7 @@ export function CoachDashboard({
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDeleteAthleteUser(ath.athleteId)}
+                          onClick={() => handleRequestDeleteAthleteUser(ath)}
                           className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
                         >
                           {t("Eliminar", "Delete")}
@@ -3604,6 +3821,234 @@ export function CoachDashboard({
               />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB 12: AUDITORÍA Y LOGS DEL SISTEMA */}
+      {activeTab === "auditoria" && (() => {
+        const allLogs = state.auditLogs ?? [];
+        const filteredLogs = allLogs.filter((log) => {
+          const matchesAction =
+            auditActionFilter === "TODOS" || log.action === auditActionFilter;
+          const q = auditSearch.trim().toLowerCase();
+          const matchesQuery =
+            !q ||
+            log.actorName.toLowerCase().includes(q) ||
+            log.actorUsername.toLowerCase().includes(q) ||
+            log.module.toLowerCase().includes(q) ||
+            log.detail.toLowerCase().includes(q);
+          return matchesAction && matchesQuery;
+        });
+
+        const badgeClass = (act: AuditActionType) => {
+          switch (act) {
+            case "INGRESO":
+              return "bg-emerald-500/20 text-emerald-300 border-emerald-500/35";
+            case "CIERRE_SESION":
+              return "bg-slate-500/20 text-slate-300 border-slate-500/35";
+            case "CREACION":
+              return "bg-sky-500/20 text-sky-300 border-sky-500/35";
+            case "MODIFICACION":
+              return "bg-amber-500/20 text-amber-300 border-amber-500/35";
+            case "ELIMINACION":
+              return "bg-rose-500/20 text-rose-300 border-rose-500/35";
+            case "EVALUACION":
+              return "bg-purple-500/20 text-purple-300 border-purple-500/35";
+          }
+        };
+
+        return (
+          <div className="rounded-3xl border border-white/10 bg-[#0D1322] p-6 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  {t(
+                    "Módulo de Auditoría y Logs del Sistema",
+                    "System Audit & Activity Logs"
+                  )}
+                </h2>
+                <p className="text-xs text-slate-400">
+                  {t(
+                    "Registro cronológico con fecha y hora de ingresos, modificaciones, evaluaciones y eliminaciones.",
+                    "Chronological record with date and time of logins, modifications, evaluations and deletions."
+                  )}
+                </p>
+              </div>
+              <span className="self-start rounded-xl bg-cyan-500/15 border border-cyan-400/30 px-3 py-1.5 text-xs font-bold text-cyan-200">
+                {filteredLogs.length} / {allLogs.length} {t("eventos", "events")}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <input
+                type="text"
+                value={auditSearch}
+                onChange={(e) => setAuditSearch(e.target.value)}
+                placeholder={t(
+                  "Buscar usuario, módulo o detalle...",
+                  "Search user, module or detail..."
+                )}
+                className="sm:col-span-2 rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"
+              />
+              <select
+                value={auditActionFilter}
+                onChange={(e) =>
+                  setAuditActionFilter(
+                    e.target.value as AuditActionType | "TODOS"
+                  )
+                }
+                className="rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none"
+              >
+                <option value="TODOS">{t("Todas las acciones", "All actions")}</option>
+                <option value="INGRESO">INGRESO</option>
+                <option value="CIERRE_SESION">CIERRE DE SESIÓN</option>
+                <option value="CREACION">CREACIÓN</option>
+                <option value="MODIFICACION">MODIFICACIÓN</option>
+                <option value="ELIMINACION">ELIMINACIÓN</option>
+                <option value="EVALUACION">EVALUACIÓN</option>
+              </select>
+            </div>
+
+            {filteredLogs.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-[#070B14]/70 py-12 text-center text-xs text-slate-400">
+                {t(
+                  "No hay registros de auditoría que coincidan con el filtro.",
+                  "No audit logs match the current filter."
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto max-h-[540px] overflow-y-auto rounded-2xl border border-white/10">
+                <table className="w-full text-left text-xs">
+                  <thead className="sticky top-0 bg-[#070B14] text-[11px] uppercase tracking-wider text-slate-400 border-b border-white/10">
+                    <tr>
+                      <th className="px-4 py-3">{t("Fecha y Hora", "Date & Time")}</th>
+                      <th className="px-4 py-3">{t("Usuario", "User")}</th>
+                      <th className="px-4 py-3">{t("Acción", "Action")}</th>
+                      <th className="px-4 py-3">{t("Módulo", "Module")}</th>
+                      <th className="px-4 py-3">{t("Detalle", "Detail")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 bg-[#070B14]/60">
+                    {filteredLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-white/[0.03]">
+                        <td className="whitespace-nowrap px-4 py-3 font-mono text-[11px] text-slate-300">
+                          {new Date(log.timestamp).toLocaleString("es-VE")}
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="font-bold text-white">{log.actorName}</p>
+                          <p className="text-[10px] font-mono text-amber-300">
+                            @{log.actorUsername} · {log.actorRole}
+                          </p>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <span
+                            className={`inline-block rounded-full border px-2.5 py-0.5 text-[10px] font-extrabold ${badgeClass(
+                              log.action
+                            )}`}
+                          >
+                            {log.action}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 font-semibold text-cyan-200">
+                          {log.module}
+                        </td>
+                        <td className="px-4 py-3 text-slate-200 max-w-md">
+                          {log.detail}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* MODAL: Confirmación Segura de Eliminación de Atleta */}
+      {deleteConfirmAth && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={handleConfirmDeleteAthleteUser}
+            className="w-full max-w-md rounded-2xl border border-rose-500/45 bg-[#0D1322] p-6 space-y-4 shadow-2xl"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/20 text-rose-300 text-lg font-black">
+                !
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-white">
+                  {t(
+                    "¿Eliminar por completo al atleta?",
+                    "Permanently delete this athlete?"
+                  )}
+                </h3>
+                <p className="mt-1 text-xs text-slate-300 leading-relaxed">
+                  {t(
+                    `Esta acción eliminará de forma permanente a ${deleteConfirmAth.fullName} (${deleteConfirmAth.athleteId}), incluyendo su usuario, perfil, pagos, solicitudes, asistencias y postulación.`,
+                    `This will permanently delete ${deleteConfirmAth.fullName} (${deleteConfirmAth.athleteId}), including user account, profile, payments, requests, attendance and application.`
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-[#070B14] p-3 text-xs text-slate-300">
+              <p>
+                {t("Autorizando como:", "Authorizing as:")}{" "}
+                <strong className="text-white">
+                  {currentUser?.fullName ?? "Administrador"} (@
+                  {currentUser?.username ?? "admin"})
+                </strong>
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-200 mb-1.5">
+                {t(
+                  "Ingresa la clave de tu perfil para autorizar la eliminación *",
+                  "Enter your profile password to authorize deletion *"
+                )}
+              </label>
+              <input
+                type="password"
+                required
+                autoFocus
+                value={deleteAuthPassword}
+                onChange={(e) => {
+                  setDeleteAuthPassword(e.target.value);
+                  setDeleteAuthError(null);
+                }}
+                placeholder="••••••••"
+                className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-rose-400 focus:outline-none"
+              />
+            </div>
+
+            {deleteAuthError && (
+              <div className="rounded-xl border border-rose-500/40 bg-rose-500/15 p-3 text-xs font-semibold text-rose-200">
+                {deleteAuthError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteConfirmAth(null);
+                  setDeleteAuthPassword("");
+                  setDeleteAuthError(null);
+                }}
+                className="rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/5 cursor-pointer"
+              >
+                {t("Cancelar", "Cancel")}
+              </button>
+              <button
+                type="submit"
+                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-500 cursor-pointer"
+              >
+                {t("Autorizar y Eliminar Todo", "Authorize & Delete All")}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

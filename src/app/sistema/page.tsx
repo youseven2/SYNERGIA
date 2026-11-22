@@ -8,6 +8,7 @@ import {
   AthleteProfile,
   SynergiaState,
   SystemUser,
+  appendAuditLog,
   authenticateSystemUser,
   loadSynergiaState,
   saveSynergiaState,
@@ -58,6 +59,49 @@ export default function SistemaPage() {
 
   const handleLogout = useCallback(
     (inactivityReason?: string) => {
+      const currentRaw =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem(SESSION_STORAGE_KEY)
+          : null;
+      if (currentRaw) {
+        try {
+          const parsed = JSON.parse(currentRaw) as StoredSessionPayload;
+          const fresh = loadSynergiaState();
+          if (parsed.session?.type === "coach") {
+            const logged = appendAuditLog(fresh, {
+              actorUsername: parsed.session.user.username,
+              actorName: parsed.session.user.fullName,
+              actorRole: parsed.session.user.role,
+              action: "CIERRE_SESION",
+              module: "Sesión",
+              detail: inactivityReason
+                ? "Cierre automático de sesión por inactividad (10 min)."
+                : "Cierre de sesión manual.",
+            });
+            saveSynergiaState(logged);
+            setState(logged);
+          } else if (parsed.session?.type === "athlete") {
+            const athId = parsed.session.athleteId;
+            const ath = fresh.athletes.find((a) => a.athleteId === athId);
+            if (ath) {
+              const logged = appendAuditLog(fresh, {
+                actorUsername: ath.username,
+                actorName: ath.fullName,
+                actorRole: "Atleta (Estándar)",
+                action: "CIERRE_SESION",
+                module: "Sesión",
+                detail: inactivityReason
+                  ? "Cierre automático de sesión por inactividad (10 min)."
+                  : "Cierre de sesión manual.",
+              });
+              saveSynergiaState(logged);
+              setState(logged);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
       persistSession({ type: "none" });
       setSession({ type: "none" });
       setUsername("");
@@ -208,6 +252,17 @@ export default function SistemaPage() {
       cleanPass
     );
     if (authenticatedSystemUser) {
+      const loggedState = appendAuditLog(freshState, {
+        actorUsername: authenticatedSystemUser.username,
+        actorName: authenticatedSystemUser.fullName,
+        actorRole: authenticatedSystemUser.role,
+        action: "INGRESO",
+        module: "Acceso al Sistema",
+        detail: `Inicio de sesión exitoso (${authenticatedSystemUser.role}).`,
+      });
+      saveSynergiaState(loggedState);
+      setState(loggedState);
+
       const nextSession: SessionMode = {
         type: "coach",
         user: authenticatedSystemUser,
@@ -224,6 +279,17 @@ export default function SistemaPage() {
         a.password.trim() === cleanPass
     );
     if (foundAthlete) {
+      const loggedState = appendAuditLog(freshState, {
+        actorUsername: foundAthlete.username,
+        actorName: foundAthlete.fullName,
+        actorRole: "Atleta (Estándar)",
+        action: "INGRESO",
+        module: "Portal del Atleta",
+        detail: `Inicio de sesión exitoso del atleta ${foundAthlete.athleteId}.`,
+      });
+      saveSynergiaState(loggedState);
+      setState(loggedState);
+
       const nextSession: SessionMode = {
         type: "athlete",
         athleteId: foundAthlete.athleteId,
@@ -243,12 +309,20 @@ export default function SistemaPage() {
 
   function handleUpdateAthlete(updated: AthleteProfile) {
     if (!state) return;
-    const nextState: SynergiaState = {
+    const baseState: SynergiaState = {
       ...state,
       athletes: state.athletes.map((a) =>
         a.athleteId === updated.athleteId ? updated : a
       ),
     };
+    const nextState = appendAuditLog(baseState, {
+      actorUsername: updated.username,
+      actorName: updated.fullName,
+      actorRole: "Atleta (Estándar)",
+      action: "MODIFICACION",
+      module: "Perfil del Atleta",
+      detail: `Actualización de datos/foto del perfil (${updated.athleteId}).`,
+    });
     saveSynergiaState(nextState);
     setState(nextState);
   }

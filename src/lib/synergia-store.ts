@@ -202,6 +202,25 @@ export interface EventNotification {
   readByAthleteIds: string[];
 }
 
+export type AuditActionType =
+  | "INGRESO"
+  | "CIERRE_SESION"
+  | "CREACION"
+  | "MODIFICACION"
+  | "ELIMINACION"
+  | "EVALUACION";
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  actorUsername: string;
+  actorName: string;
+  actorRole: string;
+  action: AuditActionType;
+  module: string;
+  detail: string;
+}
+
 export interface SynergiaState {
   applications: RegistrationApplication[];
   forms: EvaluationFormTemplate[];
@@ -214,6 +233,7 @@ export interface SynergiaState {
   events: SynergiaEvent[];
   eventNotifications: EventNotification[];
   attendanceRecords: AttendanceRecord[];
+  auditLogs: AuditLogEntry[];
 }
 
 export const DEFAULT_EVENTS: SynergiaEvent[] = [
@@ -399,6 +419,21 @@ export function getCurrentMonthKey(): string {
   return `${y}-${m}`;
 }
 
+export function appendAuditLog(
+  state: SynergiaState,
+  entry: Omit<AuditLogEntry, "id" | "timestamp">
+): SynergiaState {
+  const newLog: AuditLogEntry = {
+    id: createRecordId("LOG"),
+    timestamp: new Date().toISOString(),
+    ...entry,
+  };
+  return {
+    ...state,
+    auditLogs: [newLog, ...(state.auditLogs ?? [])].slice(0, 500),
+  };
+}
+
 export function loadSynergiaState(): SynergiaState {
   if (typeof window === "undefined") {
     return {
@@ -413,6 +448,7 @@ export function loadSynergiaState(): SynergiaState {
       events: DEFAULT_EVENTS,
       eventNotifications: [],
       attendanceRecords: [],
+      auditLogs: [],
     };
   }
   try {
@@ -430,6 +466,7 @@ export function loadSynergiaState(): SynergiaState {
         events: DEFAULT_EVENTS,
         eventNotifications: [],
         attendanceRecords: [],
+        auditLogs: [],
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
       return initial;
@@ -461,6 +498,7 @@ export function loadSynergiaState(): SynergiaState {
       attendanceRecords: Array.isArray(parsed.attendanceRecords)
         ? parsed.attendanceRecords
         : [],
+      auditLogs: Array.isArray(parsed.auditLogs) ? parsed.auditLogs : [],
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
     return merged;
@@ -477,6 +515,7 @@ export function loadSynergiaState(): SynergiaState {
       events: DEFAULT_EVENTS,
       eventNotifications: [],
       attendanceRecords: [],
+      auditLogs: [],
     };
   }
 }
