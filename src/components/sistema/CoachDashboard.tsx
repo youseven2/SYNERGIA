@@ -172,6 +172,7 @@ export function CoachDashboard({
   const [editAthPosition, setEditAthPosition] = useState<AthleteProfile["position"]>(
     CHEER_POSITIONS[0]
   );
+  const [promoteCategory, setPromoteCategory] = useState<string>(CHEER_CATEGORIES[0]);
 
   useEffect(() => {
     if (activeTab === "metricas" || activeTab === "menu") {
@@ -402,6 +403,72 @@ export function CoachDashboard({
     handleGoToEvaluation(app);
   }
 
+  function handleSelectRegisteredAthleteForEval(ath: AthleteProfile) {
+    setPromoteCategory(ath.category);
+    const existingApp = state.applications.find(
+      (a) => a.id === ath.applicationId || a.id === `APP-${ath.athleteId}`
+    );
+    if (existingApp) {
+      handleGoToEvaluation(existingApp);
+      return;
+    }
+
+    const fallbackAppId = ath.applicationId || `APP-${ath.athleteId}`;
+    const createdApp: RegistrationApplication = {
+      id: fallbackAppId,
+      trackingCode: ath.athleteId,
+      createdAt: ath.clubJoinDate || new Date().toISOString(),
+      birthDate: ath.birthDate,
+      age: ath.age,
+      isMinor: ath.isMinor,
+      isUnderNine: ath.age < 9,
+      fullName: ath.fullName,
+      documentId: ath.documentId,
+      phone: ath.phone,
+      email: ath.email,
+      notes: "",
+      repName: ath.repName,
+      repPhone: ath.repPhone,
+      status: "formalizado",
+    };
+
+    commitState({
+      ...state,
+      applications: [createdApp, ...state.applications],
+      athletes: state.athletes.map((a) =>
+        a.athleteId === ath.athleteId && !a.applicationId
+          ? { ...a, applicationId: fallbackAppId }
+          : a
+      ),
+    });
+    handleGoToEvaluation(createdApp);
+  }
+
+  function handlePromoteAthleteCategory() {
+    if (!currentEvalApp) return;
+    const targetAth = state.athletes.find(
+      (a) =>
+        a.applicationId === currentEvalApp.id ||
+        `APP-${a.athleteId}` === currentEvalApp.id
+    );
+    if (!targetAth) return;
+
+    commitState({
+      ...state,
+      athletes: state.athletes.map((a) =>
+        a.athleteId === targetAth.athleteId
+          ? { ...a, category: promoteCategory }
+          : a
+      ),
+    });
+    setEvalSavedMsg(
+      t(
+        `Categoría de ${targetAth.fullName} actualizada a "${promoteCategory}".`,
+        `${targetAth.fullName}'s category updated to "${promoteCategory}".`
+      )
+    );
+  }
+
   function handleChangeEvalForm(newFormId: string) {
     setEvalFormId(newFormId);
     const template = state.forms.find((f) => f.id === newFormId);
@@ -492,6 +559,12 @@ export function CoachDashboard({
     (a) =>
       a.status !== "formalizado" &&
       a.fullName.toLowerCase().includes(evalSearch.toLowerCase())
+  );
+
+  const filteredRegisteredForEval = state.athletes.filter(
+    (a) =>
+      a.fullName.toLowerCase().includes(evalSearch.toLowerCase()) ||
+      a.athleteId.toLowerCase().includes(evalSearch.toLowerCase())
   );
 
   const selectedAthlete =
@@ -846,15 +919,35 @@ export function CoachDashboard({
   function handleDeleteAthleteUser(athleteId: string) {
     setSysUserError(null);
     setSysUserSuccess(null);
+    const targetAth = state.athletes.find((a) => a.athleteId === athleteId);
+    const targetAppId = targetAth?.applicationId || `APP-${athleteId}`;
+
     if (editAthleteId === athleteId) setEditAthleteId(null);
+    if (selectedAthleteId === athleteId) setSelectedAthleteId("");
+    if (selectedEvalAppId === targetAppId) setSelectedEvalAppId("");
+    if (formalizeAppId === targetAppId) setFormalizeAppId("");
+
     commitState({
       ...state,
       athletes: state.athletes.filter((a) => a.athleteId !== athleteId),
+      applications: state.applications.filter(
+        (app) => app.id !== targetAppId && app.trackingCode !== athleteId
+      ),
+      payments: state.payments.filter((p) => p.athleteId !== athleteId),
+      paymentNotifications: state.paymentNotifications.filter(
+        (n) => n.athleteId !== athleteId
+      ),
+      materialRequests: state.materialRequests.filter(
+        (r) => r.athleteId !== athleteId
+      ),
+      attendanceRecords: state.attendanceRecords.filter(
+        (r) => r.athleteId !== athleteId
+      ),
     });
     setSysUserSuccess(
       t(
-        "Usuario estándar eliminado del sistema.",
-        "Standard user deleted from the system."
+        "Usuario estándar y toda la información asociada al atleta eliminados del sistema.",
+        "Standard user and all associated athlete data deleted from the system."
       )
     );
   }
@@ -1629,32 +1722,84 @@ export function CoachDashboard({
               placeholder="Buscar nombre del atleta..."
               className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
             />
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {filteredEvalApps.length === 0 ? (
-                <p className="text-xs text-slate-400">
-                  No hay aspirantes pendientes por evaluar.
+            <div className="space-y-4 max-h-[480px] overflow-y-auto pr-1">
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                  {t("Aspirantes por Evaluar", "Pending Applicants")}
                 </p>
-              ) : (
-                filteredEvalApps.map((app) => (
-                  <button
-                    key={app.id}
-                    type="button"
-                    onClick={() => handleSelectEvalAthlete(app.id)}
-                    className={`w-full text-left rounded-xl border p-3 transition-all cursor-pointer ${
-                      selectedEvalAppId === app.id
-                        ? "border-emerald-400 bg-emerald-500/10"
-                        : "border-white/10 bg-[#070B14]/60 hover:border-white/25"
-                    }`}
-                  >
-                    <p className="text-sm font-bold text-white">
-                      {app.fullName}
-                    </p>
-                    <p className="text-[11px] text-slate-400">
-                      {app.trackingCode} · {app.age} años
-                    </p>
-                  </button>
-                ))
-              )}
+                {filteredEvalApps.length === 0 ? (
+                  <p className="text-xs text-slate-400">
+                    No hay aspirantes pendientes por evaluar.
+                  </p>
+                ) : (
+                  filteredEvalApps.map((app) => (
+                    <button
+                      key={app.id}
+                      type="button"
+                      onClick={() => handleSelectEvalAthlete(app.id)}
+                      className={`w-full text-left rounded-xl border p-3 transition-all cursor-pointer ${
+                        selectedEvalAppId === app.id
+                          ? "border-emerald-400 bg-emerald-500/10"
+                          : "border-white/10 bg-[#070B14]/60 hover:border-white/25"
+                      }`}
+                    >
+                      <p className="text-sm font-bold text-white">
+                        {app.fullName}
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        {app.trackingCode} · {app.age} años
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <div className="border-t border-white/10 pt-3 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-purple-300">
+                  {t(
+                    "Atletas Registrados (Re-evaluación / Ascenso)",
+                    "Registered Athletes (Re-evaluation / Promotion)"
+                  )}
+                </p>
+                {filteredRegisteredForEval.length === 0 ? (
+                  <p className="text-xs text-slate-400">
+                    {t(
+                      "No hay atletas registrados que coincidan.",
+                      "No matching registered athletes."
+                    )}
+                  </p>
+                ) : (
+                  filteredRegisteredForEval.map((ath) => {
+                    const isSelected =
+                      selectedEvalAppId === ath.applicationId ||
+                      selectedEvalAppId === `APP-${ath.athleteId}`;
+                    return (
+                      <button
+                        key={ath.athleteId}
+                        type="button"
+                        onClick={() => handleSelectRegisteredAthleteForEval(ath)}
+                        className={`w-full text-left rounded-xl border p-3 transition-all cursor-pointer ${
+                          isSelected
+                            ? "border-purple-400 bg-purple-500/15"
+                            : "border-white/10 bg-[#070B14]/60 hover:border-purple-400/40"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-bold text-white truncate">
+                            {ath.fullName}
+                          </p>
+                          <span className="shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-bold text-purple-200">
+                            {ath.athleteId}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                          {ath.category} · {ath.age} años
+                        </p>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
 
@@ -1675,6 +1820,14 @@ export function CoachDashboard({
                     <h2 className="text-xl font-extrabold text-white">
                       {currentEvalApp.fullName}
                     </h2>
+                    {currentEvalApp.status === "formalizado" && (
+                      <span className="mt-1 inline-block rounded-full bg-purple-500/20 border border-purple-400/35 px-2.5 py-0.5 text-[10px] font-bold text-purple-200">
+                        {t(
+                          "Atleta Registrado · Re-evaluación de Categoría / Nivel",
+                          "Registered Athlete · Category / Level Re-evaluation"
+                        )}
+                      </span>
+                    )}
                   </div>
 
                   <select
@@ -1767,23 +1920,56 @@ export function CoachDashboard({
                         >
                           Generar Reporte PDF
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormalizeAppId(currentEvalApp.id);
-                            setFormalizeCategory(
-                              currentEvalApp.evaluation?.category ??
-                                CHEER_CATEGORIES[0]
-                            );
-                          }}
-                          className="rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-amber-300 cursor-pointer"
-                        >
-                          Finiquitar Inscripción
-                        </button>
+                        {currentEvalApp.status !== "formalizado" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormalizeAppId(currentEvalApp.id);
+                              setFormalizeCategory(
+                                currentEvalApp.evaluation?.category ??
+                                  CHEER_CATEGORIES[0]
+                              );
+                            }}
+                            className="rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-amber-300 cursor-pointer"
+                          >
+                            Finiquitar Inscripción
+                          </button>
+                        )}
                       </>
                     )}
                   </div>
                 </div>
+
+                {currentEvalApp.status === "formalizado" && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-purple-500/30 bg-purple-500/10 p-3.5">
+                    <div className="space-y-1 flex-1">
+                      <p className="text-xs font-bold text-purple-200">
+                        {t(
+                          "Ascenso / Cambio de Categoría o Nivel",
+                          "Category / Level Promotion"
+                        )}
+                      </p>
+                      <select
+                        value={promoteCategory}
+                        onChange={(e) => setPromoteCategory(e.target.value)}
+                        className="w-full rounded-lg border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white focus:border-purple-400 focus:outline-none"
+                      >
+                        {CHEER_CATEGORIES.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handlePromoteAthleteCategory}
+                      className="shrink-0 rounded-xl bg-purple-500 px-4 py-2.5 text-xs font-bold text-white hover:bg-purple-400 cursor-pointer"
+                    >
+                      {t("Actualizar Categoría", "Update Category")}
+                    </button>
+                  </div>
+                )}
 
                 {evalSavedMsg && (
                   <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-200">
