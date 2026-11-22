@@ -164,16 +164,18 @@ export function Navbar() {
     <>
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#050810]/95 shadow-lg shadow-black/40 backdrop-blur-md print:hidden">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group min-w-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/synergia-logo.svg"
-              alt="SYNERGIA ALL STARS"
-              className="h-9 sm:h-11 w-auto shrink-0 object-contain transition-transform group-hover:scale-105"
-            />
-          </Link>
+          <div className="flex items-center lg:flex-1 min-w-0">
+            <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group min-w-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/synergia-logo.svg"
+                alt="SYNERGIA ALL STARS"
+                className="h-9 sm:h-11 w-auto shrink-0 object-contain transition-transform group-hover:scale-105"
+              />
+            </Link>
+          </div>
 
-          <nav className="hidden lg:flex lg:flex-1 lg:justify-center items-center gap-6 text-sm font-semibold text-slate-200">
+          <nav className="hidden lg:flex items-center justify-center gap-5 xl:gap-6 text-sm font-semibold text-slate-200 whitespace-nowrap">
             <Link
               href="/"
               onClick={() => recordSectionView("Inicio")}
@@ -217,7 +219,7 @@ export function Navbar() {
             </button>
           </nav>
 
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 shrink-0 lg:flex-1">
             {/* Botón de Buscar */}
             <button
               type="button"

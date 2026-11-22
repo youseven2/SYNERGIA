@@ -163,6 +163,15 @@ export function CoachDashboard({
   );
   const [sysUserError, setSysUserError] = useState<string | null>(null);
   const [sysUserSuccess, setSysUserSuccess] = useState<string | null>(null);
+  const [editAthleteId, setEditAthleteId] = useState<string | null>(null);
+  const [editAthUsername, setEditAthUsername] = useState("");
+  const [editAthPassword, setEditAthPassword] = useState("");
+  const [editAthCategory, setEditAthCategory] = useState<AthleteProfile["category"]>(
+    CHEER_CATEGORIES[0]
+  );
+  const [editAthPosition, setEditAthPosition] = useState<AthleteProfile["position"]>(
+    CHEER_POSITIONS[0]
+  );
 
   useEffect(() => {
     if (activeTab === "metricas" || activeTab === "menu") {
@@ -762,6 +771,92 @@ export function CoachDashboard({
         (u) => u.username.toLowerCase() !== targetUsername.toLowerCase()
       ),
     });
+  }
+
+  function handleStartEditAthleteUser(ath: AthleteProfile) {
+    setSysUserError(null);
+    setSysUserSuccess(null);
+    setEditAthleteId(ath.athleteId);
+    setEditAthUsername(ath.username);
+    setEditAthPassword(ath.password);
+    setEditAthCategory(ath.category);
+    setEditAthPosition(ath.position);
+  }
+
+  function handleSaveEditAthleteUser(e: FormEvent) {
+    e.preventDefault();
+    if (!editAthleteId) return;
+    setSysUserError(null);
+    setSysUserSuccess(null);
+
+    const cleanUser = editAthUsername.trim().toLowerCase();
+    const cleanPass = editAthPassword.trim();
+
+    if (!cleanUser || !cleanPass) {
+      setSysUserError(
+        t(
+          "El usuario y la contraseña no pueden estar vacíos.",
+          "Username and password cannot be empty."
+        )
+      );
+      return;
+    }
+
+    const existsInSystem = state.systemUsers.some(
+      (u) => u.username.toLowerCase() === cleanUser
+    );
+    const existsInOtherAthlete = state.athletes.some(
+      (a) =>
+        a.athleteId !== editAthleteId &&
+        a.username.toLowerCase() === cleanUser
+    );
+    if (existsInSystem || existsInOtherAthlete) {
+      setSysUserError(
+        t(
+          `El usuario "${cleanUser}" ya está en uso.`,
+          `Username "${cleanUser}" is already in use.`
+        )
+      );
+      return;
+    }
+
+    commitState({
+      ...state,
+      athletes: state.athletes.map((a) =>
+        a.athleteId === editAthleteId
+          ? {
+              ...a,
+              username: cleanUser,
+              password: cleanPass,
+              category: editAthCategory,
+              position: editAthPosition,
+            }
+          : a
+      ),
+    });
+    setEditAthleteId(null);
+    setSysUserSuccess(
+      t(
+        `Usuario estándar "${cleanUser}" actualizado correctamente.`,
+        `Standard user "${cleanUser}" updated successfully.`
+      )
+    );
+  }
+
+  function handleDeleteAthleteUser(athleteId: string) {
+    setSysUserError(null);
+    setSysUserSuccess(null);
+    if (editAthleteId === athleteId) setEditAthleteId(null);
+    commitState({
+      ...state,
+      athletes: state.athletes.filter((a) => a.athleteId !== athleteId),
+    });
+    setSysUserSuccess(
+      t(
+        "Usuario estándar eliminado del sistema.",
+        "Standard user deleted from the system."
+      )
+    );
   }
 
   const deviceLabel =
@@ -2320,15 +2415,53 @@ export function CoachDashboard({
                     </span>
                   </div>
                   <p className="text-xs text-slate-300">
-                    {t("Teléfono:", "Phone:")} {ath.phone}
+                    {ath.repPhone
+                      ? t("Tel. Representante:", "Guardian Phone:")
+                      : t("Teléfono:", "Phone:")}{" "}
+                    {ath.repPhone || ath.phone || t("No registrado", "Not registered")}
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => handleSendPaymentNotification(ath.athleteId, ath.fullName)}
-                    className="w-full rounded-xl border border-amber-400/40 bg-amber-400/15 py-2 text-xs font-bold text-amber-200 hover:bg-amber-400/25 cursor-pointer"
-                  >
-                    {t("Enviar Notificación de Pago", "Send Payment Notification")}
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSendPaymentNotification(ath.athleteId, ath.fullName)}
+                      className="w-full rounded-xl border border-amber-400/40 bg-amber-400/15 py-2 text-xs font-bold text-amber-200 hover:bg-amber-400/25 cursor-pointer"
+                    >
+                      {t("Enviar Notificación de Pago", "Send Payment Notification")}
+                    </button>
+                    {(() => {
+                      const rawPhone = (ath.repPhone || ath.phone || "").trim();
+                      let digits = rawPhone.replace(/\D/g, "");
+                      if (digits.startsWith("0")) digits = "58" + digits.slice(1);
+                      if (digits.length < 7) return null;
+                      const statusLabel = athPayStatus.isSuspended
+                        ? "SUSPENDIDO POR MOROSIDAD (2 meses o más)"
+                        : "PAGO PENDIENTE / MOROSO";
+                      const waMsg = [
+                        `Hola ${ath.repName ? ath.repName : ath.fullName}, te saludamos de *SYNERGIA All Stars Cheer*.`,
+                        ``,
+                        `Te enviamos este *Aviso Administrativo de Cobro* correspondiente al atleta:`,
+                        `• *Atleta:* ${ath.fullName}`,
+                        `• *ID:* ${ath.athleteId}`,
+                        `• *Categoría:* ${ath.category}`,
+                        `• *Estatus:* ${statusLabel}`,
+                        ``,
+                        `Por favor, regulariza tu mensualidad a través del módulo *Pagos* en el Sistema SYNERGIA o envíanos tu comprobante de pago por este medio para actualizar tu solvencia.`,
+                        ``,
+                        `¡Gracias por tu atención!`,
+                      ].join("\n");
+                      return (
+                        <a
+                          href={`https://wa.me/${digits}?text=${encodeURIComponent(waMsg)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/20 py-2 text-xs font-bold text-emerald-200 hover:bg-emerald-500/30 transition-colors"
+                        >
+                          <span>📲</span>
+                          <span>{t("Enviar Aviso por WhatsApp", "Send WhatsApp Notice")}</span>
+                        </a>
+                      );
+                    })()}
+                  </div>
                 </div>
                 );
               })}
@@ -3044,7 +3177,7 @@ export function CoachDashboard({
               </span>
             </div>
 
-            <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[540px] overflow-y-auto pr-1">
               {state.systemUsers.map((u) => (
                 <div
                   key={u.username}
@@ -3075,6 +3208,158 @@ export function CoachDashboard({
                   )}
                 </div>
               ))}
+
+              {state.athletes.map((ath) => {
+                const athPay = getAthletePaymentStatus(state, ath);
+                const isEditing = editAthleteId === ath.athleteId;
+                return (
+                  <div
+                    key={ath.athleteId}
+                    className="rounded-2xl border border-purple-500/25 bg-[#070B14]/85 p-4 text-xs space-y-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-bold text-white truncate">
+                            {ath.fullName}
+                          </span>
+                          <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-bold text-purple-200">
+                            {t("Usuario Estándar (Atleta)", "Standard User (Athlete)")}
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              athPay.isSuspended
+                                ? "bg-rose-600/30 text-rose-200"
+                                : athPay.isOverdue
+                                ? "bg-amber-500/25 text-amber-200"
+                                : "bg-emerald-500/20 text-emerald-300"
+                            }`}
+                          >
+                            {athPay.isSuspended
+                              ? t("Suspendido", "Suspended")
+                              : athPay.isOverdue
+                              ? t("Moroso", "Overdue")
+                              : t("Solvente", "Solvent")}
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              ath.profileCompleted
+                                ? "bg-sky-500/20 text-sky-300"
+                                : "bg-amber-500/20 text-amber-300"
+                            }`}
+                          >
+                            {ath.profileCompleted
+                              ? t("Perfil Completo", "Profile Complete")
+                              : t("Formalización Pendiente", "Pending Profile")}
+                          </span>
+                        </div>
+                        <p className="font-mono text-amber-300">
+                          {t("Usuario:", "Username:")} {ath.username} · {t("Clave:", "Pass:")} {ath.password}
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          {ath.athleteId} · {ath.category} ({ath.position})
+                        </p>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditAthleteUser(ath)}
+                          className="rounded-lg border border-sky-400/40 bg-sky-500/15 px-2.5 py-1.5 text-[11px] font-bold text-sky-200 hover:bg-sky-500/25 cursor-pointer"
+                        >
+                          {t("Modificar", "Edit")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAthleteUser(ath.athleteId)}
+                          className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                        >
+                          {t("Eliminar", "Delete")}
+                        </button>
+                      </div>
+                    </div>
+
+                    {isEditing && (
+                      <form
+                        onSubmit={handleSaveEditAthleteUser}
+                        className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2.5"
+                      >
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <label className="space-y-1 text-[11px] text-slate-300">
+                            <span>{t("Usuario", "Username")}</span>
+                            <input
+                              type="text"
+                              value={editAthUsername}
+                              onChange={(e) => setEditAthUsername(e.target.value)}
+                              className="w-full rounded-lg border border-white/15 bg-[#0D1322] px-2.5 py-1.5 text-xs text-white"
+                            />
+                          </label>
+                          <label className="space-y-1 text-[11px] text-slate-300">
+                            <span>{t("Contraseña", "Password")}</span>
+                            <input
+                              type="text"
+                              value={editAthPassword}
+                              onChange={(e) => setEditAthPassword(e.target.value)}
+                              className="w-full rounded-lg border border-white/15 bg-[#0D1322] px-2.5 py-1.5 text-xs text-white"
+                            />
+                          </label>
+                          <label className="space-y-1 text-[11px] text-slate-300">
+                            <span>{t("Categoría", "Category")}</span>
+                            <select
+                              value={editAthCategory}
+                              onChange={(e) =>
+                                setEditAthCategory(
+                                  e.target.value as AthleteProfile["category"]
+                                )
+                              }
+                              className="w-full rounded-lg border border-white/15 bg-[#0D1322] px-2.5 py-1.5 text-xs text-white"
+                            >
+                              {CHEER_CATEGORIES.map((c) => (
+                                <option key={c} value={c}>
+                                  {c}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="space-y-1 text-[11px] text-slate-300">
+                            <span>{t("Posición", "Position")}</span>
+                            <select
+                              value={editAthPosition}
+                              onChange={(e) =>
+                                setEditAthPosition(
+                                  e.target.value as AthleteProfile["position"]
+                                )
+                              }
+                              className="w-full rounded-lg border border-white/15 bg-[#0D1322] px-2.5 py-1.5 text-xs text-white"
+                            >
+                              {CHEER_POSITIONS.map((p) => (
+                                <option key={p} value={p}>
+                                  {p}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditAthleteId(null)}
+                            className="rounded-lg border border-white/15 px-3 py-1.5 text-[11px] font-semibold text-slate-300 hover:bg-white/10 cursor-pointer"
+                          >
+                            {t("Cancelar", "Cancel")}
+                          </button>
+                          <button
+                            type="submit"
+                            className="rounded-lg bg-emerald-500 px-3 py-1.5 text-[11px] font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+                          >
+                            {t("Guardar Cambios", "Save Changes")}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
