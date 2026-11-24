@@ -275,12 +275,6 @@ export function CoachDashboard({
       if (digits.startsWith("0")) {
         digits = `58${digits.slice(1)}`;
       }
-      const gymAddress = citaCategory.includes("Bellas Artes")
-        ? "Sede Bellas Artes · Galería de Arte Nacional, Caracas"
-        : citaCategory.includes("Los Dos Caminos")
-        ? "Sede Los Dos Caminos · Av. El Centro, Los Dos Caminos, Caracas"
-        : "Sede Los Dos Caminos (Av. El Centro) / Sede Bellas Artes (Galería de Arte Nacional), Caracas";
-
       const recipientName =
         citaApp.isMinor && citaApp.repName
           ? citaApp.repName
@@ -297,7 +291,14 @@ export function CoachDashboard({
         `• *Grupo:* ${citaCategory}`,
         `• *Día de presentación:* ${citaDate}`,
         `• *Hora:* ${citaTime}`,
-        `• *Dirección del gimnasio:* ${gymAddress}`,
+        "",
+        "📍 *UBICACIÓN DE NUESTRAS SEDES (Google Maps):*",
+        "1️⃣ *Sede Los Dos Caminos:* Av. El Centro, Los Dos Caminos, Caracas 1071, Miranda",
+        "🗺️ https://maps.app.goo.gl/CJdCAN3NnCqsErXAA?g_st=aw",
+        "2️⃣ *Sede Bellas Artes:* Galería de Arte Nacional, Bellas Artes, Caracas 1010",
+        "🗺️ https://maps.app.goo.gl/6zn5GhKKC9QA9aXx5?g_st=aw",
+        "",
+        "📞 *Número de contacto:* Dir. Felix (+58 414-3311099) | Dir. Daniela (+58 424-1535062)",
         "",
         "👕 Por favor asistir 10 minutos antes con ropa deportiva cómoda, calzado deportivo e hidratación.",
         "",
@@ -443,7 +444,7 @@ export function CoachDashboard({
       "🌟 *SYNERGIA ALL STARS* 🌟",
       "_Club Deportivo Exclusivo de Porrismo (Cheerleading)_",
       "📍 Sedes: Los Dos Caminos (Av. El Centro) / Bellas Artes (Galería de Arte Nacional), Caracas",
-      "📞 Dirección: Dir. Felix (+58 414-3311099) | Dir. Daniela (+58 424-1535062)",
+      "📞 Número de contacto: Dir. Felix (+58 414-3311099) | Dir. Daniela (+58 424-1535062)",
       "",
       "Estimado(a), nos complace informarle que la inscripción del atleta ha sido *FORMALIZADA* exitosamente:",
       "",
