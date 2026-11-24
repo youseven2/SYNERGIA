@@ -29,7 +29,6 @@ const GALLERY_ITEMS: GalleryItem[] = [
     accent: "from-emerald-500/30 via-teal-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-1.jpg",
     objectPosClass: "object-center",
-    fitClass: "object-contain bg-[#070B14]",
   },
   {
     id: "competencia-2",
@@ -102,7 +101,6 @@ const GALLERY_ITEMS: GalleryItem[] = [
     accent: "from-purple-500/30 via-cyan-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-7.jpg",
     objectPosClass: "object-center",
-    fitClass: "object-contain bg-[#070B14]",
   },
   {
     id: "campeones-8",
