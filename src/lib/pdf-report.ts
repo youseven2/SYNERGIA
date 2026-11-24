@@ -1,7 +1,13 @@
 "use client";
 
 import { jsPDF } from "jspdf";
-import { AthleteProfile, RegistrationApplication } from "./synergia-store";
+import {
+  AccountingCreditEntry,
+  AccountingDebitEntry,
+  AthletePayment,
+  AthleteProfile,
+  RegistrationApplication,
+} from "./synergia-store";
 import { AnalyticsState, formatDuration } from "./analytics-store";
 
 function drawSynergiaLetterhead(doc: jsPDF, subtitle: string): void {
@@ -640,4 +646,244 @@ export function generateAnalyticsPdf(analytics: AnalyticsState): void {
   doc.text("Dirección General · SYNERGIA ALL STARS", 16, 270);
 
   doc.save("Reporte_Estadisticas_SYNERGIA.pdf");
+}
+
+export interface AccountingLedgerPdfParams {
+  monthKey: string;
+  approvedPayments: AthletePayment[];
+  specialCredits: AccountingCreditEntry[];
+  debitExpenses: AccountingDebitEntry[];
+}
+
+export function generateAccountingLedgerPdf({
+  monthKey,
+  approvedPayments,
+  specialCredits,
+  debitExpenses,
+}: AccountingLedgerPdfParams): void {
+  const doc = new jsPDF();
+  drawSynergiaLetterhead(doc, "Libro Contable General · Conciliación Bancaria");
+
+  doc.setTextColor(15, 23, 42);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text("LIBRO CONTABLE GENERAL (CRÉDITOS Y DÉBITOS)", 105, 52, {
+    align: "center",
+  });
+  doc.setDrawColor(0, 183, 164);
+  doc.setLineWidth(0.6);
+  doc.line(48, 54.5, 162, 54.5);
+
+  const totalMonthlyFees = approvedPayments.reduce((s, p) => s + p.amount, 0);
+  const totalSpecial = specialCredits.reduce((s, c) => s + c.amount, 0);
+  const totalCredits = totalMonthlyFees + totalSpecial;
+  const totalDebits = debitExpenses.reduce((s, d) => s + d.amount, 0);
+  const netBalance = totalCredits - totalDebits;
+
+  // Tarjeta resumen del período
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(14, 59, 182, 24, 2.5, 2.5, "FD");
+  doc.setFillColor(126, 61, 151);
+  doc.rect(14, 59, 2.5, 24, "F");
+
+  doc.setTextColor(15, 23, 42);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9.5);
+  doc.text(`Período Contable: ${monthKey}`, 20, 65.5);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.text(
+    `Abonos Mensualidad: $${totalMonthlyFees.toFixed(2)}   |   Ingresos Especiales: $${totalSpecial.toFixed(2)}`,
+    20,
+    71.5
+  );
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(5, 150, 105);
+  doc.text(`Total Créditos: +$${totalCredits.toFixed(2)}`, 20, 78);
+  doc.setTextColor(225, 29, 72);
+  doc.text(`Total Débitos: -$${totalDebits.toFixed(2)}`, 82, 78);
+  doc.setTextColor(15, 23, 42);
+  doc.text(
+    `Saldo en Libro: ${netBalance >= 0 ? "+" : "-"}$${Math.abs(netBalance).toFixed(2)}`,
+    144,
+    78
+  );
+
+  interface LedgerRow {
+    sortDate: string;
+    dateLabel: string;
+    typeLabel: string;
+    refLabel: string;
+    conceptLabel: string;
+    credit: number;
+    debit: number;
+  }
+
+  const rows: LedgerRow[] = [
+    ...approvedPayments.map((p) => ({
+      sortDate: p.reviewedAt || p.createdAt,
+      dateLabel: (p.reviewedAt || p.createdAt).slice(0, 10),
+      typeLabel: "CRÉDITO · Mens.",
+      refLabel: p.reference ? `${p.reference}` : p.method.toUpperCase(),
+      conceptLabel: `${p.athleteName} (${p.athleteId})${p.bank ? ` · ${p.bank}` : ""}`,
+      credit: p.amount,
+      debit: 0,
+    })),
+    ...specialCredits.map((c) => ({
+      sortDate: c.date || c.createdAt,
+      dateLabel: (c.date || c.createdAt).slice(0, 10),
+      typeLabel: `CRÉDITO · ${c.source}`,
+      refLabel: c.notes ? c.notes.slice(0, 18) : "ESPECIAL",
+      conceptLabel: c.concept,
+      credit: c.amount,
+      debit: 0,
+    })),
+    ...debitExpenses.map((d) => ({
+      sortDate: d.date || d.createdAt,
+      dateLabel: (d.date || d.createdAt).slice(0, 10),
+      typeLabel: `DÉBITO · ${d.category}`,
+      refLabel: d.documentNumber || "S/N",
+      conceptLabel: `${d.concept} (${d.beneficiary})`,
+      credit: 0,
+      debit: d.amount,
+    })),
+  ].sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+
+  const drawLedgerHeader = (startY: number) => {
+    doc.setFillColor(15, 23, 42);
+    doc.roundedRect(14, startY - 5, 182, 8, 1.5, 1.5, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.8);
+    doc.text("Fecha", 16, startY);
+    doc.text("Tipo", 36, startY);
+    doc.text("Ref / Doc", 68, startY);
+    doc.text("Concepto / Detalle", 93, startY);
+    doc.text("Crédito", 152, startY, { align: "right" });
+    doc.text("Débito", 173, startY, { align: "right" });
+    doc.text("Saldo", 194, startY, { align: "right" });
+  };
+
+  let y = 92;
+  drawLedgerHeader(y);
+  y += 6.5;
+
+  let runningBalance = 0;
+
+  if (rows.length === 0) {
+    doc.setTextColor(100, 116, 139);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(
+      "No hay movimientos de créditos ni débitos registrados en este período.",
+      105,
+      y + 8,
+      { align: "center" }
+    );
+    y += 18;
+  } else {
+    rows.forEach((row, idx) => {
+      runningBalance += row.credit - row.debit;
+      const typeLines = doc.splitTextToSize(row.typeLabel, 30);
+      const refLines = doc.splitTextToSize(row.refLabel, 23);
+      const conceptLines = doc.splitTextToSize(row.conceptLabel, 44);
+      const maxLines = Math.max(
+        typeLines.length,
+        refLines.length,
+        conceptLines.length
+      );
+      const rowHeight = Math.max(7, maxLines * 4 + 2.5);
+
+      if (y + rowHeight > 255) {
+        drawSynergiaFooter(doc);
+        doc.addPage();
+        drawSynergiaLetterhead(doc, `Libro Contable ${monthKey} (Cont.)`);
+        y = 55;
+        drawLedgerHeader(y);
+        y += 6.5;
+      }
+
+      if (idx % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(14, y - 4, 182, rowHeight, "F");
+      }
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.2);
+      doc.line(14, y + rowHeight - 4, 196, y + rowHeight - 4);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(30, 41, 59);
+      doc.text(row.dateLabel, 16, y);
+      doc.text(typeLines, 36, y);
+      doc.text(refLines, 68, y);
+      doc.text(conceptLines, 93, y);
+
+      doc.setFont("helvetica", "bold");
+      if (row.credit > 0) {
+        doc.setTextColor(5, 150, 105);
+        doc.text(`+$${row.credit.toFixed(2)}`, 152, y, { align: "right" });
+      } else {
+        doc.setTextColor(148, 163, 184);
+        doc.text("-", 152, y, { align: "right" });
+      }
+
+      if (row.debit > 0) {
+        doc.setTextColor(225, 29, 72);
+        doc.text(`-$${row.debit.toFixed(2)}`, 173, y, { align: "right" });
+      } else {
+        doc.setTextColor(148, 163, 184);
+        doc.text("-", 173, y, { align: "right" });
+      }
+
+      doc.setTextColor(15, 23, 42);
+      doc.text(
+        `${runningBalance >= 0 ? "" : "-"}$${Math.abs(runningBalance).toFixed(2)}`,
+        194,
+        y,
+        { align: "right" }
+      );
+
+      y += rowHeight;
+    });
+  }
+
+  // Cuadro de Conciliación Bancaria
+  if (y + 38 > 272) {
+    drawSynergiaFooter(doc);
+    doc.addPage();
+    drawSynergiaLetterhead(doc, `Conciliación Bancaria · ${monthKey}`);
+    y = 58;
+  } else {
+    y += 6;
+  }
+
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(148, 163, 184);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(14, y, 182, 28, 2.5, 2.5, "FD");
+  doc.setTextColor(15, 23, 42);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("CUADRO DE CONCILIACIÓN BANCARIA", 20, y + 6.5);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.2);
+  doc.text(
+    `Saldo Final según Libro SYNERGIA: ${netBalance >= 0 ? "+" : "-"}$${Math.abs(netBalance).toFixed(2)}`,
+    20,
+    y + 13
+  );
+  doc.text(
+    "Saldo según Estado de Cuenta Bancario: $________________",
+    20,
+    y + 19.5
+  );
+  doc.text("Diferencia por Conciliar: $________________", 118, y + 19.5);
+  doc.text("Revisado por: __________________________", 20, y + 25.5);
+  doc.text("Firma Dirección: ________________________", 118, y + 25.5);
+
+  drawSynergiaFooter(doc);
+  doc.save(`Libro_Contable_SYNERGIA_${monthKey}.pdf`);
 }

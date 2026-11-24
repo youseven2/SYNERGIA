@@ -28,6 +28,7 @@ import {
   syncScheduledPaymentReminders,
 } from "@/lib/synergia-store";
 import {
+  generateAccountingLedgerPdf,
   generateAnalyticsPdf,
   generateAthleteProfilePdf,
   generateAthletesListPdf,
@@ -2939,6 +2940,21 @@ export function CoachDashboard({
                   {t("Actualizar", "Update")}
                 </button>
               </form>
+
+              <button
+                type="button"
+                onClick={() =>
+                  generateAccountingLedgerPdf({
+                    monthKey: accountingMonth,
+                    approvedPayments: approvedForMonth,
+                    specialCredits: specialCreditsMonth,
+                    debitExpenses: debitExpensesMonth,
+                  })
+                }
+                className="rounded-xl border border-amber-400/45 bg-amber-400/15 px-3.5 py-2 text-xs font-extrabold text-amber-200 hover:bg-amber-400/25 cursor-pointer"
+              >
+                📄 {t("Reporte Libro PDF (Conciliación)", "Ledger PDF Report (Reconciliation)")}
+              </button>
             </div>
           </div>
 
