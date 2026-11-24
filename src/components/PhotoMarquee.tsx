@@ -13,6 +13,7 @@ interface GalleryItem {
   tagEn: string;
   accent: string;
   imageUrl: string;
+  objectPosClass?: string;
 }
 
 const GALLERY_ITEMS: GalleryItem[] = [
@@ -26,6 +27,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     tagEn: "Stunts",
     accent: "from-emerald-500/30 via-teal-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-1.jpg",
+    objectPosClass: "object-center",
   },
   {
     id: "competencia-2",
@@ -37,6 +39,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     tagEn: "Competition",
     accent: "from-purple-500/30 via-teal-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-2.jpg",
+    objectPosClass: "object-center",
   },
   {
     id: "equipo-3",
@@ -48,6 +51,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     tagEn: "Team",
     accent: "from-cyan-500/30 via-emerald-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-3.jpg",
+    objectPosClass: "object-[50%_68%]",
   },
   {
     id: "familia-4",
@@ -59,6 +63,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     tagEn: "Academy",
     accent: "from-fuchsia-500/25 via-emerald-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-4.jpg",
+    objectPosClass: "object-[50%_62%]",
   },
   {
     id: "union-5",
@@ -70,6 +75,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     tagEn: "All Star Family",
     accent: "from-teal-500/30 via-purple-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-5.jpg",
+    objectPosClass: "object-[50%_62%]",
   },
   {
     id: "formacion-6",
@@ -81,6 +87,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     tagEn: "Training",
     accent: "from-amber-400/30 via-emerald-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-6.jpg",
+    objectPosClass: "object-[50%_62%]",
   },
   {
     id: "mini-stunts-7",
@@ -92,6 +99,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     tagEn: "Pyramids",
     accent: "from-purple-500/30 via-cyan-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-7.jpg",
+    objectPosClass: "object-[50%_64%]",
   },
   {
     id: "campeones-8",
@@ -103,6 +111,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     tagEn: "Champions",
     accent: "from-amber-500/30 via-emerald-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-8.jpg",
+    objectPosClass: "object-center",
   },
   {
     id: "medallistas-9",
@@ -114,6 +123,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     tagEn: "Podium",
     accent: "from-emerald-500/30 via-purple-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-9.jpg",
+    objectPosClass: "object-center",
   },
 ];
 
@@ -271,7 +281,9 @@ export function PhotoMarquee() {
                   <img
                     src={item.imageUrl}
                     alt={title}
-                    className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                    className={`h-full w-full object-cover ${
+                      item.objectPosClass ?? "object-center"
+                    } transition-transform duration-500 group-hover:scale-105`}
                   />
 
                   <span className="absolute top-3 left-3 rounded-full border border-white/15 bg-[#070B14]/75 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300 backdrop-blur-md">
@@ -395,7 +407,9 @@ export function PhotoMarquee() {
                     <img
                       src={thumb.imageUrl}
                       alt={lang === "en" ? thumb.titleEn : thumb.titleEs}
-                      className="h-full w-full object-cover object-top"
+                      className={`h-full w-full object-cover ${
+                        thumb.objectPosClass ?? "object-center"
+                      }`}
                     />
                   </button>
                 ))}
