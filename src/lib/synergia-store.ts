@@ -262,7 +262,7 @@ export const DEFAULT_EVENTS: SynergiaEvent[] = [
     title: "Gala Navideña SYNERGIA ALL STARS",
     time: "03:00 pm – 06:30 pm",
     location: "Bellas Artes, Galería de Arte Nacional",
-    description: "Exhibición especial de cierre de año con todas las categorías.",
+    description: "Exhibición especial de cierre de año con todos los grupos.",
     category: "Evento Especial",
   },
 ];

@@ -294,7 +294,7 @@ export function CoachDashboard({
         "",
         `• *Aspirante:* ${citaApp.fullName}`,
         `• *Código:* ${citaApp.trackingCode}`,
-        `• *Categoría:* ${citaCategory}`,
+        `• *Grupo:* ${citaCategory}`,
         `• *Día de presentación:* ${citaDate}`,
         `• *Hora:* ${citaTime}`,
         `• *Dirección del gimnasio:* ${gymAddress}`,
@@ -426,7 +426,7 @@ export function CoachDashboard({
       },
       "CREACION",
       "Inscripción",
-      `Formalización de inscripción: ${newAthlete.fullName} (${newAthlete.athleteId}) · Categoría: ${newAthlete.category}.`
+      `Formalización de inscripción: ${newAthlete.fullName} (${newAthlete.athleteId}) · Grupo: ${newAthlete.category}.`
     );
 
     setFormalizeAppId(null);
@@ -450,7 +450,7 @@ export function CoachDashboard({
       `🏅 *Atleta:* ${newAthlete.fullName}`,
       `🪪 *Documento / Cédula:* ${newAthlete.documentId}`,
       `🆔 *ID Oficial:* ${newAthlete.athleteId}`,
-      `🏆 *Categoría Asignada:* ${newAthlete.category}`,
+      `🏆 *Grupo Asignado:* ${newAthlete.category}`,
       ...(app.isMinor && app.repName
         ? [`👨‍👩‍👧 *Representante:* ${app.repName}`]
         : []),
@@ -642,12 +642,12 @@ export function CoachDashboard({
       },
       "MODIFICACION",
       "Evaluación y PDF",
-      `Ascenso/cambio de categoría de ${targetAth.fullName} (${targetAth.athleteId}) a "${promoteCategory}".`
+      `Ascenso/cambio de grupo de ${targetAth.fullName} (${targetAth.athleteId}) a "${promoteCategory}".`
     );
     setEvalSavedMsg(
       t(
-        `Categoría de ${targetAth.fullName} actualizada a "${promoteCategory}".`,
-        `${targetAth.fullName}'s category updated to "${promoteCategory}".`
+        `Grupo de ${targetAth.fullName} actualizado a "${promoteCategory}".`,
+        `${targetAth.fullName}'s group updated to "${promoteCategory}".`
       )
     );
   }
@@ -1004,7 +1004,7 @@ export function CoachDashboard({
     setEvSavedMsg(
       evSendNotice
         ? t(
-            "Evento publicado y aviso enviado a las categorías seleccionadas.",
+            "Evento publicado y aviso enviado a los grupos seleccionados.",
             "Event published and notice sent to selected categories."
           )
         : t(
@@ -1164,7 +1164,7 @@ export function CoachDashboard({
       },
       "MODIFICACION",
       "Usuarios del Sistema",
-      `Modificación de atleta estándar (${editAthleteId}) · usuario "${cleanUser}", categoría "${editAthCategory}", posición "${editAthPosition}".`
+      `Modificación de atleta estándar (${editAthleteId}) · usuario "${cleanUser}", grupo "${editAthCategory}", posición "${editAthPosition}".`
     );
     setEditAthleteId(null);
     setSysUserSuccess(
@@ -1942,7 +1942,7 @@ export function CoachDashboard({
               </h2>
               <p className="text-xs text-slate-400 mt-1">
                 Agrega actividades con su descripción y ponderación, y clasifica
-                el formulario por categoría.
+                el formulario por grupo.
               </p>
             </div>
 
@@ -1962,7 +1962,7 @@ export function CoachDashboard({
 
             <div>
               <label className="block text-sm font-semibold text-slate-200">
-                Clasificar por Categoría *
+                Clasificar por Grupo *
               </label>
               <select
                 value={formCategory}
@@ -2229,8 +2229,8 @@ export function CoachDashboard({
                     {currentEvalApp.status === "formalizado" && (
                       <span className="mt-1 inline-block rounded-full bg-purple-500/20 border border-purple-400/35 px-2.5 py-0.5 text-[10px] font-bold text-purple-200">
                         {t(
-                          "Atleta Registrado · Re-evaluación de Categoría / Nivel",
-                          "Registered Athlete · Category / Level Re-evaluation"
+                          "Atleta Registrado · Re-evaluación de Grupo / Nivel",
+                          "Registered Athlete · Group / Level Re-evaluation"
                         )}
                       </span>
                     )}
@@ -2360,8 +2360,8 @@ export function CoachDashboard({
                     <div className="space-y-1 flex-1">
                       <p className="text-xs font-bold text-purple-200">
                         {t(
-                          "Ascenso / Cambio de Categoría o Nivel",
-                          "Category / Level Promotion"
+                          "Ascenso / Cambio de Grupo o Nivel",
+                          "Group / Level Promotion"
                         )}
                       </p>
                       <select
@@ -2381,7 +2381,7 @@ export function CoachDashboard({
                       onClick={handlePromoteAthleteCategory}
                       className="shrink-0 rounded-xl bg-purple-500 px-4 py-2.5 text-xs font-bold text-white hover:bg-purple-400 cursor-pointer"
                     >
-                      {t("Actualizar Categoría", "Update Category")}
+                      {t("Actualizar Grupo", "Update Group")}
                     </button>
                   </div>
                 )}
@@ -2456,7 +2456,7 @@ export function CoachDashboard({
         </div>
       )}
 
-      {/* TAB 4: PERFIL DEL ATLETA Y REPORTES POR CATEGORÍA */}
+      {/* TAB 4: PERFIL DEL ATLETA Y REPORTES POR GRUPO */}
       {activeTab === "perfil" && (() => {
         const filteredAthletes =
           athleteCategoryFilter === "TODAS"
@@ -2466,7 +2466,7 @@ export function CoachDashboard({
               );
         const categoryLabel =
           athleteCategoryFilter === "TODAS"
-            ? t("Todas las categorías", "All categories")
+            ? t("Todos los grupos", "All groups")
             : athleteCategoryFilter;
 
         return (
@@ -2530,13 +2530,13 @@ export function CoachDashboard({
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <select
-                aria-label={t("Filtrar por categoría", "Filter by category")}
+                aria-label={t("Filtrar por grupo", "Filter by group")}
                 value={athleteCategoryFilter}
                 onChange={(e) => setAthleteCategoryFilter(e.target.value)}
                 className="rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-xs font-semibold text-white focus:border-[#00B7A4] focus:outline-none"
               >
                 <option value="TODAS">
-                  {t("Todas las categorías", "All categories")} ({state.athletes.length})
+                  {t("Todos los grupos", "All groups")} ({state.athletes.length})
                 </option>
                 {CHEER_CATEGORIES.map((cat) => {
                   const cnt = state.athletes.filter(
@@ -2579,7 +2579,7 @@ export function CoachDashboard({
                         "No formalized athletes yet."
                       )
                     : t(
-                        "No hay atletas en esta categoría.",
+                        "No hay atletas en este grupo.",
                         "No athletes in this category."
                       )}
                 </p>
@@ -3129,7 +3129,7 @@ export function CoachDashboard({
                         `Te enviamos este *Aviso Administrativo de Cobro* correspondiente al atleta:`,
                         `• *Atleta:* ${ath.fullName}`,
                         `• *ID:* ${ath.athleteId}`,
-                        `• *Categoría:* ${ath.category}`,
+                        `• *Grupo:* ${ath.category}`,
                         `• *Estatus:* ${statusLabel}`,
                         ``,
                         `Por favor, regulariza tu mensualidad a través del módulo *Pagos* en el Sistema SYNERGIA o envíanos tu comprobante de pago por este medio para actualizar tu solvencia.`,
@@ -3310,7 +3310,7 @@ export function CoachDashboard({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-200">
-                  {t("Categoría", "Category")}
+                  {t("Grupo", "Group")}
                 </label>
                 <input
                   type="text"
@@ -3370,7 +3370,7 @@ export function CoachDashboard({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-semibold text-slate-200">
-                        {t("Categorías a notificar:", "Categories to notify:")}
+                        {t("Grupos a notificar:", "Groups to notify:")}
                       </span>
                       <button
                         type="button"
@@ -3384,7 +3384,7 @@ export function CoachDashboard({
                             : "border border-white/20 text-slate-300 hover:bg-white/10"
                         }`}
                       >
-                        {t("Todas las categorías", "All categories")}
+                        {t("Todos los grupos", "All groups")}
                       </button>
                     </div>
 
@@ -4018,7 +4018,7 @@ export function CoachDashboard({
                             />
                           </label>
                           <label className="space-y-1 text-[11px] text-slate-300">
-                            <span>{t("Categoría", "Category")}</span>
+                            <span>{t("Grupo", "Group")}</span>
                             <select
                               value={editAthCategory}
                               onChange={(e) =>
@@ -4379,7 +4379,7 @@ export function CoachDashboard({
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-200">
-                Categoría / Sede asignada *
+                Grupo / Sede asignada *
               </label>
               <select
                 value={citaCategory}
@@ -4439,13 +4439,13 @@ export function CoachDashboard({
               Formalizar Inscripción del Atleta
             </h3>
             <p className="text-xs text-slate-400">
-              Determina la categoría final. Al formalizar, se creará
+              Determina el grupo final. Al formalizar, se creará
               el perfil del atleta con su ID único, usuario (inicial + apellido)
               y clave provisional <strong className="text-amber-300">123456</strong>.
             </p>
             <div>
               <label className="block text-xs font-semibold text-slate-200">
-                Categoría asignada *
+                Grupo asignado *
               </label>
               <select
                 value={formalizeCategory}

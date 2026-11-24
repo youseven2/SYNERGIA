@@ -124,7 +124,7 @@ export function InscripcionForm() {
           <strong className="text-emerald-300">SYNERGIA ALL STARS</strong> ha
           generado un aviso para el entrenador. Pronto se te asignará una{" "}
           <strong className="text-amber-300">cita de prueba</strong> para
-          evaluar tu nivel y determinar tu categoría y posición.
+          evaluar tu nivel y determinar tu grupo y posición.
         </p>
 
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left text-sm space-y-2">
@@ -231,7 +231,7 @@ export function InscripcionForm() {
         />
 
         <p className="text-xs text-slate-400">
-          La categoría y posición serán asignadas por el entrenador luego de
+          El grupo y posición serán asignados por el entrenador luego de
           realizar la prueba de evaluación.
         </p>
       </div>

@@ -120,7 +120,7 @@ export function generateEvaluationPdf(app: RegistrationApplication): void {
   doc.text(`Formulario: ${ev.formName}`, 20, infoY);
   infoY += 6;
   doc.text(
-    `Categoría: ${ev.category}   |   Fecha: ${new Date(ev.evaluatedAt).toLocaleString("es-ES")}`,
+    `Grupo: ${ev.category}   |   Fecha: ${new Date(ev.evaluatedAt).toLocaleString("es-ES")}`,
     20,
     infoY
   );
@@ -200,7 +200,7 @@ export function generateEvaluationPdf(app: RegistrationApplication): void {
     doc.setFontSize(9.5);
     doc.setTextColor(71, 85, 105);
     doc.text(
-      `Categoría asignada: ${app.assignedCategory ?? "Por definir"}   |   Posición: ${app.assignedPosition ?? "Por definir"}`,
+      `Grupo asignado: ${app.assignedCategory ?? "Por definir"}   |   Posición: ${app.assignedPosition ?? "Por definir"}`,
       18,
       y + 16.5
     );
@@ -309,7 +309,7 @@ export function generateAthleteProfilePdf(athlete: AthleteProfile): void {
   addField("Nombre Completo", athlete.fullName);
   addField("ID Oficial", `${athlete.athleteId}   |   Cédula: ${athlete.documentId || "N/A"}`);
   addField("Nacimiento / Edad", `${athlete.birthDate || "N/A"} (${athlete.age} años)`);
-  addField("Categoría", `${athlete.category} · ${athlete.position}`);
+  addField("Grupo", `${athlete.category} · ${athlete.position}`);
   addField(
     "Ingreso al Club",
     athlete.clubJoinDate || athlete.formalizedAt.slice(0, 10)
@@ -461,7 +461,7 @@ export function generateAthletesListPdf(
   doc.setTextColor(15, 23, 42);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
-  doc.text(`Filtro de Categoría: ${categoryLabel}`, 20, 66.5);
+  doc.text(`Filtro de Grupo: ${categoryLabel}`, 20, 66.5);
   doc.setFont("helvetica", "normal");
   doc.text(`Total de Atletas Registrados: ${athletes.length}`, 20, 72.5);
 
@@ -475,7 +475,7 @@ export function generateAthletesListPdf(
     doc.text("ID Oficial", 23, startY);
     doc.text("Nombre Completo", 57, startY);
     doc.text("Edad", 110, startY);
-    doc.text("Categoría", 122, startY);
+    doc.text("Grupo", 122, startY);
     doc.text("Teléfono", 166, startY);
   };
 

@@ -765,7 +765,7 @@ export function AthletePortal({
             </span>
           </div>
           <div>
-            <span className="text-slate-400 block">Categoría Asignada:</span>
+            <span className="text-slate-400 block">Grupo Asignado:</span>
             <span className="font-semibold text-emerald-300">
               {athlete.category}
             </span>
