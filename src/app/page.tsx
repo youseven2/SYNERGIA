@@ -81,6 +81,54 @@ const CHEER_TEAMS = [
     badgeEs: "Bellas Artes",
     badgeEn: "Bellas Artes",
   },
+  {
+    name: "YOUTH N1.1 PREP",
+    slug: "youth-n1-1-prep",
+    levelEs: "De 7 a 13 años · Lun, Mié y Vie 2:30 pm – 4:00 pm",
+    levelEn: "Ages 7 to 13 · Mon, Wed & Fri 2:30 pm – 4:00 pm",
+    descriptionEs:
+      "Horario Competitivo en Los Dos Caminos, Av. El Centro. Nivel 1.1 Prep enfocado en técnica competitiva, elevaciones limpias y sincronización.",
+    descriptionEn:
+      "Competitive schedule at Los Dos Caminos, Av. El Centro. Level 1.1 Prep focused on competitive technique, clean stunts and synchronization.",
+    badgeEs: "Competitivo · Los Dos Caminos",
+    badgeEn: "Competitive · Los Dos Caminos",
+  },
+  {
+    name: "YOUTH N1 ELITE",
+    slug: "youth-n1-elite",
+    levelEs: "De 7 a 13 años · Mar y Vie 4:00 pm – 6:00 pm · Mié 4:00 pm – 5:30 pm",
+    levelEn: "Ages 7 to 13 · Tue & Fri 4:00 pm – 6:00 pm · Wed 4:00 pm – 5:30 pm",
+    descriptionEs:
+      "Horario Competitivo en Los Dos Caminos, Av. El Centro. Nivel 1 Elite de alto rendimiento en stunts, tumbling y coreografía All Star.",
+    descriptionEn:
+      "Competitive schedule at Los Dos Caminos, Av. El Centro. Level 1 Elite high-performance stunts, tumbling and All Star choreography.",
+    badgeEs: "Competitivo · Los Dos Caminos",
+    badgeEn: "Competitive · Los Dos Caminos",
+  },
+  {
+    name: "JUNIOR N2",
+    slug: "junior-n2",
+    levelEs: "De 9 a 16 años · Lun y Jue 5:00 pm – 7:00 pm · Mié 5:30 pm – 7:30 pm",
+    levelEn: "Ages 9 to 16 · Mon & Thu 5:00 pm – 7:00 pm · Wed 5:30 pm – 7:30 pm",
+    descriptionEs:
+      "Horario Competitivo en Los Dos Caminos, Av. El Centro. Nivel 2 con transiciones avanzadas, pirámides, saltos y acrobacia competitiva.",
+    descriptionEn:
+      "Competitive schedule at Los Dos Caminos, Av. El Centro. Level 2 with advanced transitions, pyramids, jumps and competitive tumbling.",
+    badgeEs: "Competitivo · Los Dos Caminos",
+    badgeEn: "Competitive · Los Dos Caminos",
+  },
+  {
+    name: "STORMBREAKER",
+    slug: "stormbreaker",
+    levelEs: "De 17 años en adelante · Mar y Jue 7:00 pm – 9:00 pm · Vie Open Gym",
+    levelEn: "Ages 17+ · Tue & Thu 7:00 pm – 9:00 pm · Fri Open Gym 7:00 pm – 9:00 pm",
+    descriptionEs:
+      "Horario Competitivo en Los Dos Caminos, Av. El Centro. Equipo mayor All Star con entrenamiento intensivo y Open Gym los viernes.",
+    descriptionEn:
+      "Competitive schedule at Los Dos Caminos, Av. El Centro. Senior All Star team with intensive training and Friday Open Gym.",
+    badgeEs: "Competitivo · Los Dos Caminos",
+    badgeEn: "Competitive · Los Dos Caminos",
+  },
 ];
 
 export default function HomePage() {
