@@ -14,6 +14,7 @@ interface GalleryItem {
   accent: string;
   imageUrl: string;
   objectPosClass?: string;
+  fitClass?: string;
 }
 
 const GALLERY_ITEMS: GalleryItem[] = [
@@ -28,6 +29,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     accent: "from-emerald-500/30 via-teal-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-1.jpg",
     objectPosClass: "object-center",
+    fitClass: "object-contain bg-[#070B14]",
   },
   {
     id: "competencia-2",
@@ -99,7 +101,8 @@ const GALLERY_ITEMS: GalleryItem[] = [
     tagEn: "Pyramids",
     accent: "from-purple-500/30 via-cyan-500/15 to-[#0D1322]",
     imageUrl: "/gallery/galeria-7.jpg",
-    objectPosClass: "object-[50%_64%]",
+    objectPosClass: "object-center",
+    fitClass: "object-contain bg-[#070B14]",
   },
   {
     id: "campeones-8",
@@ -137,7 +140,7 @@ const SPEED_SECONDS: Record<SpeedOption, string> = {
 
 export function PhotoMarquee() {
   const [isPaused, setIsPaused] = useState(false);
-  const [speed, setSpeed] = useState<SpeedOption>("normal");
+  const [speed, setSpeed] = useState<SpeedOption>("slow");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const { lang, t } = useI18n();
@@ -281,7 +284,9 @@ export function PhotoMarquee() {
                   <img
                     src={item.imageUrl}
                     alt={title}
-                    className={`h-full w-full object-cover ${
+                    className={`h-full w-full ${
+                      item.fitClass ?? "object-cover"
+                    } ${
                       item.objectPosClass ?? "object-center"
                     } transition-transform duration-500 group-hover:scale-105`}
                   />
