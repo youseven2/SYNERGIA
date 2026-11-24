@@ -222,6 +222,38 @@ export interface AuditLogEntry {
   detail: string;
 }
 
+export type DebitCategory =
+  | "Factura"
+  | "Recibo"
+  | "Sueldos y Salarios"
+  | "Gasto Especial / Extraordinario";
+
+export interface AccountingCreditEntry {
+  id: string;
+  monthKey: string;
+  date: string;
+  concept: string;
+  source: string;
+  amount: number;
+  notes?: string;
+  recordedBy: string;
+  createdAt: string;
+}
+
+export interface AccountingDebitEntry {
+  id: string;
+  monthKey: string;
+  date: string;
+  category: DebitCategory;
+  documentNumber?: string;
+  beneficiary: string;
+  concept: string;
+  amount: number;
+  notes?: string;
+  recordedBy: string;
+  createdAt: string;
+}
+
 export interface SynergiaState {
   applications: RegistrationApplication[];
   forms: EvaluationFormTemplate[];
@@ -235,6 +267,8 @@ export interface SynergiaState {
   eventNotifications: EventNotification[];
   attendanceRecords: AttendanceRecord[];
   auditLogs: AuditLogEntry[];
+  specialCredits?: AccountingCreditEntry[];
+  debitExpenses?: AccountingDebitEntry[];
 }
 
 export const DEFAULT_EVENTS: SynergiaEvent[] = [
@@ -450,6 +484,8 @@ export function loadSynergiaState(): SynergiaState {
       eventNotifications: [],
       attendanceRecords: [],
       auditLogs: [],
+      specialCredits: [],
+      debitExpenses: [],
     };
   }
   try {
@@ -468,6 +504,8 @@ export function loadSynergiaState(): SynergiaState {
         eventNotifications: [],
         attendanceRecords: [],
         auditLogs: [],
+        specialCredits: [],
+        debitExpenses: [],
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
       return initial;
@@ -500,6 +538,12 @@ export function loadSynergiaState(): SynergiaState {
         ? parsed.attendanceRecords
         : [],
       auditLogs: Array.isArray(parsed.auditLogs) ? parsed.auditLogs : [],
+      specialCredits: Array.isArray(parsed.specialCredits)
+        ? parsed.specialCredits
+        : [],
+      debitExpenses: Array.isArray(parsed.debitExpenses)
+        ? parsed.debitExpenses
+        : [],
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
     return merged;
@@ -517,6 +561,8 @@ export function loadSynergiaState(): SynergiaState {
       eventNotifications: [],
       attendanceRecords: [],
       auditLogs: [],
+      specialCredits: [],
+      debitExpenses: [],
     };
   }
 }

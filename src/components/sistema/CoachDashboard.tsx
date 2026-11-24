@@ -2,12 +2,15 @@
 
 import { ChangeEvent, useEffect, useState, FormEvent } from "react";
 import {
+  AccountingCreditEntry,
+  AccountingDebitEntry,
   ActivityScore,
   AthleteEvaluation,
   AthleteProfile,
   AuditActionType,
   CHEER_CATEGORIES,
   CHEER_POSITIONS,
+  DebitCategory,
   EvaluationActivity,
   EvaluationFormTemplate,
   RegistrationApplication,
@@ -209,6 +212,20 @@ export function CoachDashboard({
   const [deleteAuthError, setDeleteAuthError] = useState<string | null>(null);
   const [auditSearch, setAuditSearch] = useState("");
   const [auditActionFilter, setAuditActionFilter] = useState<AuditActionType | "TODOS">("TODOS");
+  const [accountingView, setAccountingView] = useState<"creditos" | "debitos">("creditos");
+  const [creditDate, setCreditDate] = useState("");
+  const [creditSource, setCreditSource] = useState("Patrocinio / Aporte");
+  const [creditConcept, setCreditConcept] = useState("");
+  const [creditAmount, setCreditAmount] = useState("");
+  const [creditNotes, setCreditNotes] = useState("");
+  const [debitCategory, setDebitCategory] = useState<DebitCategory>("Factura");
+  const [debitDate, setDebitDate] = useState("");
+  const [debitDocNum, setDebitDocNum] = useState("");
+  const [debitBeneficiary, setDebitBeneficiary] = useState("");
+  const [debitConcept, setDebitConcept] = useState("");
+  const [debitAmount, setDebitAmount] = useState("");
+  const [debitNotes, setDebitNotes] = useState("");
+  const [debitFilterCategory, setDebitFilterCategory] = useState<DebitCategory | "TODOS">("TODOS");
 
   useEffect(() => {
     if (activeTab === "metricas" || activeTab === "menu") {
@@ -822,6 +839,121 @@ export function CoachDashboard({
     0,
     totalExpectedMonth - totalApprovedMonth
   );
+
+  const specialCreditsMonth = (state.specialCredits ?? []).filter(
+    (c) => c.monthKey === accountingMonth
+  );
+  const totalSpecialCreditsMonth = specialCreditsMonth.reduce(
+    (sum, c) => sum + c.amount,
+    0
+  );
+  const totalCreditsMonth = totalApprovedMonth + totalSpecialCreditsMonth;
+
+  const debitExpensesMonth = (state.debitExpenses ?? []).filter(
+    (d) => d.monthKey === accountingMonth
+  );
+  const totalDebitsMonth = debitExpensesMonth.reduce(
+    (sum, d) => sum + d.amount,
+    0
+  );
+  const netBalanceMonth = totalCreditsMonth - totalDebitsMonth;
+
+  function handleAddSpecialCredit(e: FormEvent) {
+    e.preventDefault();
+    const amountNum = Number(creditAmount);
+    if (!creditConcept.trim() || !Number.isFinite(amountNum) || amountNum <= 0) {
+      return;
+    }
+    const entry: AccountingCreditEntry = {
+      id: createRecordId("cred"),
+      monthKey: accountingMonth,
+      date: creditDate || new Date().toISOString().slice(0, 10),
+      source: creditSource.trim() || "Pago Especial",
+      concept: creditConcept.trim(),
+      amount: amountNum,
+      notes: creditNotes.trim() || undefined,
+      recordedBy: currentUser?.username ?? "admin",
+      createdAt: new Date().toISOString(),
+    };
+    logAndCommit(
+      {
+        ...state,
+        specialCredits: [entry, ...(state.specialCredits ?? [])],
+      },
+      "CREACION",
+      "Contabilidad (Créditos)",
+      `Ingreso especial registrado: ${entry.concept} ($${entry.amount.toFixed(2)} · ${entry.source}).`
+    );
+    setCreditConcept("");
+    setCreditAmount("");
+    setCreditNotes("");
+  }
+
+  function handleDeleteSpecialCredit(id: string) {
+    const target = (state.specialCredits ?? []).find((c) => c.id === id);
+    logAndCommit(
+      {
+        ...state,
+        specialCredits: (state.specialCredits ?? []).filter((c) => c.id !== id),
+      },
+      "ELIMINACION",
+      "Contabilidad (Créditos)",
+      `Ingreso especial eliminado: ${target?.concept ?? id} ($${target?.amount.toFixed(2) ?? "0.00"}).`
+    );
+  }
+
+  function handleAddDebitExpense(e: FormEvent) {
+    e.preventDefault();
+    const amountNum = Number(debitAmount);
+    if (
+      !debitBeneficiary.trim() ||
+      !debitConcept.trim() ||
+      !Number.isFinite(amountNum) ||
+      amountNum <= 0
+    ) {
+      return;
+    }
+    const entry: AccountingDebitEntry = {
+      id: createRecordId("deb"),
+      monthKey: accountingMonth,
+      date: debitDate || new Date().toISOString().slice(0, 10),
+      category: debitCategory,
+      documentNumber: debitDocNum.trim() || undefined,
+      beneficiary: debitBeneficiary.trim(),
+      concept: debitConcept.trim(),
+      amount: amountNum,
+      notes: debitNotes.trim() || undefined,
+      recordedBy: currentUser?.username ?? "admin",
+      createdAt: new Date().toISOString(),
+    };
+    logAndCommit(
+      {
+        ...state,
+        debitExpenses: [entry, ...(state.debitExpenses ?? [])],
+      },
+      "CREACION",
+      "Contabilidad (Débitos)",
+      `Gasto (${entry.category}) registrado: ${entry.concept} · ${entry.beneficiary} ($${entry.amount.toFixed(2)}).`
+    );
+    setDebitDocNum("");
+    setDebitBeneficiary("");
+    setDebitConcept("");
+    setDebitAmount("");
+    setDebitNotes("");
+  }
+
+  function handleDeleteDebitExpense(id: string) {
+    const target = (state.debitExpenses ?? []).find((d) => d.id === id);
+    logAndCommit(
+      {
+        ...state,
+        debitExpenses: (state.debitExpenses ?? []).filter((d) => d.id !== id),
+      },
+      "ELIMINACION",
+      "Contabilidad (Débitos)",
+      `Gasto eliminado: ${target?.concept ?? id} ($${target?.amount.toFixed(2) ?? "0.00"}).`
+    );
+  }
 
   const defaultersList = state.athletes.filter((ath) => {
     const paidThisMonth = approvedForMonth
@@ -2757,18 +2889,18 @@ export function CoachDashboard({
         </div>
       )}
 
-      {/* 5. CONTABILIDAD Y VERIFICACIÓN DE PAGOS */}
+      {/* 5. CONTABILIDAD Y VERIFICACIÓN DE PAGOS (CRÉDITOS Y DÉBITOS) */}
       {activeTab === "contabilidad" && (
         <section className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 rounded-2xl border border-white/10 bg-[#0D1322] p-5">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 rounded-2xl border border-white/10 bg-[#0D1322] p-5">
             <div>
               <h2 className="text-lg font-bold text-white">
-                {t("Módulo de Contabilidad y Verificación de Pagos", "Accounting & Payment Verification")}
+                {t("Módulo de Contabilidad: Créditos y Débitos", "Accounting Module: Credits & Debits")}
               </h2>
               <p className="text-xs text-slate-400 mt-1">
                 {t(
-                  "Al aprobar un pago, se descuenta automáticamente del saldo pendiente del mes en contabilidad.",
-                  "Approving a payment automatically deducts it from the month's pending balance."
+                  "Control integral de abonos de atletas, ingresos especiales de la escuela y gastos por facturas, recibos, sueldos y extraordinarios.",
+                  "Comprehensive tracking of athlete credits, special school income, and expenses by invoices, receipts, payroll & extraordinary items."
                 )}
               </p>
             </div>
@@ -2810,203 +2942,579 @@ export function CoachDashboard({
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-4">
-              <p className="text-xs text-slate-400">{t("Esperado del Mes", "Expected Monthly")}</p>
-              <p className="mt-1 text-2xl font-extrabold text-white">${totalExpectedMonth.toFixed(2)}</p>
-            </div>
+          {/* Resumen Global del Mes (Créditos vs Débitos = Balance Neto) */}
+          <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-              <p className="text-xs text-emerald-300">{t("Ingresos Aprobados (Descontado)", "Approved Income")}</p>
-              <p className="mt-1 text-2xl font-extrabold text-emerald-400">${totalApprovedMonth.toFixed(2)}</p>
+              <p className="text-xs font-semibold text-emerald-300">
+                {t("Total Créditos / Abonos del Mes", "Total Monthly Credits")}
+              </p>
+              <p className="mt-1 text-2xl font-extrabold text-emerald-400">
+                +${totalCreditsMonth.toFixed(2)}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-300">
+                Mensualidades: ${totalApprovedMonth.toFixed(2)} · Especiales: ${totalSpecialCreditsMonth.toFixed(2)}
+              </p>
             </div>
             <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4">
-              <p className="text-xs text-rose-300">{t("Saldo Pendiente por Cobrar", "Remaining Balance")}</p>
-              <p className="mt-1 text-2xl font-extrabold text-rose-300">${totalPendingDebtMonth.toFixed(2)}</p>
-            </div>
-            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4">
-              <p className="text-xs text-amber-300">{t("Pagos por Verificar", "Payments to Verify")}</p>
-              <p className="mt-1 text-2xl font-extrabold text-amber-300">{pendingPaymentsCount}</p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-4">
-            <h3 className="text-base font-bold text-white">
-              {t("Comprobantes de Pago Recibidos", "Received Payment Proofs")} ({state.payments.length})
-            </h3>
-            {state.payments.length === 0 ? (
-              <p className="py-8 text-center text-xs text-slate-400">
-                {t("No hay pagos registrados por atletas todavía.", "No athlete payments registered yet.")}
+              <p className="text-xs font-semibold text-rose-300">
+                {t("Total Débitos / Gastos del Mes", "Total Monthly Debits")}
               </p>
-            ) : (
-              <div className="space-y-3">
-                {state.payments.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#070B14]/80 p-4 text-xs"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-bold text-white">{p.athleteName}</span>
-                        <span className="font-mono text-amber-300">{p.athleteId}</span>
-                        <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-200">
-                          {p.method.replace("_", " ")} · {p.monthKey}
-                        </span>
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
-                            p.status === "aprobado"
-                              ? "bg-emerald-500/20 text-emerald-300"
-                              : p.status === "rechazado"
-                              ? "bg-rose-500/20 text-rose-300"
-                              : "bg-amber-400/20 text-amber-300"
-                          }`}
-                        >
-                          {p.status}
-                        </span>
-                      </div>
-                      <p className="text-emerald-300 font-extrabold text-sm">
-                        ${p.amount.toFixed(2)}
-                      </p>
-                      {p.bank && (
-                        <p className="text-slate-300">
-                          Banco: {p.bank} · Ref: <span className="font-mono">{p.reference}</span> · Cédula: {p.documentId}
-                          {p.phone ? ` · Tel: ${p.phone}` : ""}
-                        </p>
-                      )}
-                      {p.cashPhotoDataUrl && (
-                        <div className="pt-1">
-                          <p className="text-[11px] text-amber-300 mb-1">Foto de efectivo adjunta:</p>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={p.cashPhotoDataUrl}
-                            alt={`Efectivo ${p.athleteName}`}
-                            className="h-24 w-auto rounded-lg border border-white/15 object-cover"
-                          />
-                        </div>
-                      )}
-                    </div>
+              <p className="mt-1 text-2xl font-extrabold text-rose-300">
+                -${totalDebitsMonth.toFixed(2)}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-300">
+                {debitExpensesMonth.length} {t("egresos registrados en el mes", "expenses recorded this month")}
+              </p>
+            </div>
+            <div
+              className={`rounded-2xl border p-4 ${
+                netBalanceMonth >= 0
+                  ? "border-cyan-400/35 bg-cyan-500/10"
+                  : "border-amber-400/40 bg-amber-500/10"
+              }`}
+            >
+              <p className="text-xs font-semibold text-slate-200">
+                {t("Balance Neto del Mes", "Monthly Net Balance")}
+              </p>
+              <p
+                className={`mt-1 text-2xl font-extrabold ${
+                  netBalanceMonth >= 0 ? "text-cyan-300" : "text-amber-300"
+                }`}
+              >
+                {netBalanceMonth >= 0 ? "+" : "-"}${Math.abs(netBalanceMonth).toFixed(2)}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-300">
+                {t("Saldo pendiente por cobrar:", "Pending receivables:")} ${totalPendingDebtMonth.toFixed(2)}
+              </p>
+            </div>
+          </div>
 
-                    {p.status === "pendiente" && (
-                      <div className="flex flex-wrap gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleReviewPayment(p.id, "aprobado")}
-                          className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
-                        >
-                          {t("Aprobar y Descontar", "Approve & Deduct")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleReviewPayment(p.id, "rechazado")}
-                          className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
-                        >
-                          {t("Rechazar", "Reject")}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            {/* 9. CONTROL DE ASISTENCIA QR / CARNET (Wide Tile) */}
+          {/* Selector de Sub-módulo: Créditos/Abonos vs Débitos/Gastos */}
+          <div className="flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-[#0D1322] p-2">
             <button
               type="button"
-              onClick={() => setActiveTab("asistencia")}
-              className="col-span-2 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-emerald-400/40 bg-gradient-to-r from-[#065F46] via-[#0F766E] to-[#4A1C5C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.015] hover:border-[#4CE4D4] cursor-pointer"
+              onClick={() => setAccountingView("creditos")}
+              className={`flex-1 min-w-[200px] rounded-xl px-4 py-2.5 text-xs sm:text-sm font-extrabold transition-colors cursor-pointer ${
+                accountingView === "creditos"
+                  ? "bg-emerald-500 text-slate-950 shadow-lg"
+                  : "text-slate-300 hover:bg-white/5"
+              }`}
             >
-              <div className="flex items-start justify-between">
-                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
-                </svg>
-                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-emerald-200">
-                  {state.attendanceRecords.length} {t("registrada(s)", "recorded")}
-                </span>
-              </div>
-              <div>
-                <p className="text-base sm:text-lg font-extrabold text-white">
-                  {t("Control de Asistencia (QR y Carnet)", "Attendance Control (QR & ID Card)")}
-                </p>
-                <p className="text-[11px] text-slate-200/85">
-                  {t("Escanear QR con cámara · Rechazo automático a morosos y suspendidos", "Scan QR with camera · Auto-reject overdue & suspended athletes")}
-                </p>
-              </div>
+              1. {t("Créditos y Abonos (Ingresos)", "Credits & Payments (Income)")}
             </button>
-
-            {/* 10. ESTADÍSTICAS Y MÉTRICAS DE LA PÁGINA (Wide Tile) */}
             <button
               type="button"
-              onClick={() => setActiveTab("metricas")}
-              className="col-span-2 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-indigo-400/40 bg-gradient-to-r from-indigo-800 via-[#381B4C] to-[#0D3B4C] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.015] hover:border-indigo-300 cursor-pointer"
+              onClick={() => setAccountingView("debitos")}
+              className={`flex-1 min-w-[200px] rounded-xl px-4 py-2.5 text-xs sm:text-sm font-extrabold transition-colors cursor-pointer ${
+                accountingView === "debitos"
+                  ? "bg-rose-500 text-white shadow-lg"
+                  : "text-slate-300 hover:bg-white/5"
+              }`}
             >
-              <div className="flex items-start justify-between">
-                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-                </svg>
-                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-indigo-200">
-                  {analytics.totalVisits} {t("visita(s)", "visits")}
-                </span>
-              </div>
-              <div>
-                <p className="text-base sm:text-lg font-extrabold text-white">
-                  {t("Estadísticas y Métricas Web", "Web Analytics & Metrics")}
-                </p>
-                <p className="text-[11px] text-slate-200/85">
-                  {t("Visitas totales, duración promedio, contenido más visto y países", "Total visits, avg duration, top content & countries")}
-                </p>
-              </div>
-            </button>
-
-            {/* 11. GESTIÓN DE USUARIOS ADMINISTRADORES Y ENTRENADORES */}
-            <button
-              type="button"
-              onClick={() => setActiveTab("usuarios")}
-              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-amber-400/40 bg-gradient-to-r from-[#381B4C] via-[#0B1528] to-[#065F46] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-amber-300 cursor-pointer"
-            >
-              <div className="flex items-start justify-between">
-                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                </svg>
-                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-amber-200">
-                  {state.systemUsers.length} {t("Admin / Entrenadores", "Admins / Coaches")} · {state.athletes.length} {t("Estándar", "Standard")}
-                </span>
-              </div>
-              <div>
-                <p className="text-base sm:text-lg font-extrabold text-white">
-                  {t("Usuarios Administradores y Entrenadores", "Administrator & Coach Users")}
-                </p>
-                <p className="text-[11px] text-slate-200/85">
-                  {t("Crear cuentas con acceso total a configuración, contabilidad y eventos", "Create accounts with full access to settings, accounting & events")}
-                </p>
-              </div>
-            </button>
-
-            {/* 12. AUDITORÍA Y LOGS DEL SISTEMA */}
-            <button
-              type="button"
-              onClick={() => setActiveTab("auditoria")}
-              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-cyan-400/35 bg-gradient-to-r from-[#0B172A] via-[#131B2E] to-[#1E1B4B] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-cyan-300 cursor-pointer"
-            >
-              <div className="flex items-start justify-between">
-                <svg className="h-9 w-9 text-cyan-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
-                </svg>
-                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-cyan-200">
-                  {(state.auditLogs ?? []).length} {t("Registros", "Records")}
-                </span>
-              </div>
-              <div>
-                <p className="text-base sm:text-lg font-extrabold text-white">
-                  {t("Auditoría y Logs del Sistema", "System Audit & Logs")}
-                </p>
-                <p className="text-[11px] text-slate-200/85">
-                  {t(
-                    "Historial con fecha y hora de ingresos, modificaciones y eliminaciones por usuario",
-                    "Date & time history of logins, modifications and deletions by user"
-                  )}
-                </p>
-              </div>
+              2. {t("Débitos y Gastos de la Escuela", "Debits & School Expenses")}
             </button>
           </div>
+
+          {accountingView === "creditos" ? (
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-4">
+                  <p className="text-xs text-slate-400">{t("Esperado Mensualidades", "Expected Monthly Fees")}</p>
+                  <p className="mt-1 text-2xl font-extrabold text-white">${totalExpectedMonth.toFixed(2)}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                  <p className="text-xs text-emerald-300">{t("Abonos Mensualidad Aprobados", "Approved Monthly Fees")}</p>
+                  <p className="mt-1 text-2xl font-extrabold text-emerald-400">${totalApprovedMonth.toFixed(2)}</p>
+                </div>
+                <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4">
+                  <p className="text-xs text-cyan-300">{t("Pagos Especiales / Extras", "Special Payments / Extras")}</p>
+                  <p className="mt-1 text-2xl font-extrabold text-cyan-300">${totalSpecialCreditsMonth.toFixed(2)}</p>
+                </div>
+                <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4">
+                  <p className="text-xs text-amber-300">{t("Comprobantes por Verificar", "Proofs to Verify")}</p>
+                  <p className="mt-1 text-2xl font-extrabold text-amber-300">{pendingPaymentsCount}</p>
+                </div>
+              </div>
+
+              {/* Cargar Pago Especial / Ingreso del Equipo o Escuela */}
+              <div className="grid gap-6 lg:grid-cols-2">
+                <form
+                  onSubmit={handleAddSpecialCredit}
+                  className="rounded-2xl border border-emerald-500/25 bg-[#0D1322] p-5 space-y-3.5"
+                >
+                  <div>
+                    <h3 className="text-base font-bold text-white">
+                      {t("Registrar Pago Especial (Escuela / Equipo)", "Register Special Income (School / Team)")}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {t(
+                        "Carga patrocinios, aportes, ventas de uniformes, entradas de eventos u otros créditos directos.",
+                        "Record sponsorships, donations, merchandise sales, event tickets or other direct credits."
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Fecha", "Date")}
+                      </label>
+                      <input
+                        type="date"
+                        value={creditDate}
+                        onChange={(e) => setCreditDate(e.target.value)}
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white [color-scheme:dark]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Origen / Tipo *", "Source / Type *")}
+                      </label>
+                      <select
+                        value={creditSource}
+                        onChange={(e) => setCreditSource(e.target.value)}
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                      >
+                        <option value="Patrocinio / Aporte">Patrocinio / Aporte</option>
+                        <option value="Evento / Competencia">Evento / Competencia</option>
+                        <option value="Uniformes / Materiales">Uniformes / Materiales</option>
+                        <option value="Inscripción / Matrícula">Inscripción / Matrícula</option>
+                        <option value="Otro Ingreso Especial">Otro Ingreso Especial</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Concepto del Crédito *", "Credit Concept *")}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={creditConcept}
+                        onChange={(e) => setCreditConcept(e.target.value)}
+                        placeholder={t("Ej. Aporte patrocinante copa nacional", "e.g. National cup sponsorship")}
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Monto ($) *", "Amount ($) *")}
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min={0.01}
+                        step="0.01"
+                        value={creditAmount}
+                        onChange={(e) => setCreditAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      {t("Observaciones (opcional)", "Notes (optional)")}
+                    </label>
+                    <input
+                      type="text"
+                      value={creditNotes}
+                      onChange={(e) => setCreditNotes(e.target.value)}
+                      placeholder={t("Referencia, banco o detalle adicional", "Reference, bank or extra detail")}
+                      className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl bg-emerald-500 py-2.5 text-xs font-extrabold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+                  >
+                    + {t("Cargar Crédito Especial", "Record Special Credit")}
+                  </button>
+                </form>
+
+                {/* Listado de Créditos Especiales del Mes */}
+                <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-bold text-white">
+                      {t("Ingresos Especiales del Mes", "Monthly Special Credits")} ({specialCreditsMonth.length})
+                    </h3>
+                    <span className="font-mono text-sm font-extrabold text-emerald-300">
+                      +${totalSpecialCreditsMonth.toFixed(2)}
+                    </span>
+                  </div>
+                  {specialCreditsMonth.length === 0 ? (
+                    <p className="py-10 text-center text-xs text-slate-400">
+                      {t("No hay pagos especiales cargados en este mes.", "No special credits recorded for this month.")}
+                    </p>
+                  ) : (
+                    <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                      {specialCreditsMonth.map((c) => (
+                        <div
+                          key={c.id}
+                          className="flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-[#070B14]/80 p-3 text-xs"
+                        >
+                          <div className="min-w-0 space-y-0.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                                {c.source}
+                              </span>
+                              <span className="font-mono text-[10px] text-slate-400">{c.date}</span>
+                            </div>
+                            <p className="font-bold text-white">{c.concept}</p>
+                            {c.notes && <p className="text-[11px] text-slate-400">{c.notes}</p>}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-mono text-sm font-extrabold text-emerald-400">
+                              +${c.amount.toFixed(2)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSpecialCredit(c.id)}
+                              className="rounded-lg border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Comprobantes de Pago Recibidos (Mensualidades) */}
+              <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-4">
+                <h3 className="text-base font-bold text-white">
+                  {t("Abonos de Atletas por Mensualidad", "Athlete Monthly Fee Payments")} ({state.payments.length})
+                </h3>
+                {state.payments.length === 0 ? (
+                  <p className="py-8 text-center text-xs text-slate-400">
+                    {t("No hay pagos registrados por atletas todavía.", "No athlete payments registered yet.")}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {state.payments.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#070B14]/80 p-4 text-xs"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-bold text-white">{p.athleteName}</span>
+                            <span className="font-mono text-amber-300">{p.athleteId}</span>
+                            <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-200">
+                              {p.method.replace("_", " ")} · {p.monthKey}
+                            </span>
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
+                                p.status === "aprobado"
+                                  ? "bg-emerald-500/20 text-emerald-300"
+                                  : p.status === "rechazado"
+                                  ? "bg-rose-500/20 text-rose-300"
+                                  : "bg-amber-400/20 text-amber-300"
+                              }`}
+                            >
+                              {p.status}
+                            </span>
+                          </div>
+                          <p className="text-emerald-300 font-extrabold text-sm">
+                            ${p.amount.toFixed(2)}
+                          </p>
+                          {p.bank && (
+                            <p className="text-slate-300">
+                              Banco: {p.bank} · Ref: <span className="font-mono">{p.reference}</span> · Cédula: {p.documentId}
+                              {p.phone ? ` · Tel: ${p.phone}` : ""}
+                            </p>
+                          )}
+                          {p.cashPhotoDataUrl && (
+                            <div className="pt-1">
+                              <p className="text-[11px] text-amber-300 mb-1">Foto de efectivo adjunta:</p>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={p.cashPhotoDataUrl}
+                                alt={`Efectivo ${p.athleteName}`}
+                                className="h-24 w-auto rounded-lg border border-white/15 object-cover"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {p.status === "pendiente" && (
+                          <div className="flex flex-wrap gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleReviewPayment(p.id, "aprobado")}
+                              className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+                            >
+                              {t("Aprobar y Descontar", "Approve & Deduct")}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleReviewPayment(p.id, "rechazado")}
+                              className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                            >
+                              {t("Rechazar", "Reject")}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* SUB-MÓDULO 2: DÉBITOS Y GASTOS DE LA ESCUELA */
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {(
+                  [
+                    "Factura",
+                    "Recibo",
+                    "Sueldos y Salarios",
+                    "Gasto Especial / Extraordinario",
+                  ] as DebitCategory[]
+                ).map((cat) => {
+                  const sumCat = debitExpensesMonth
+                    .filter((d) => d.category === cat)
+                    .reduce((s, d) => s + d.amount, 0);
+                  return (
+                    <div
+                      key={cat}
+                      className="rounded-2xl border border-rose-500/25 bg-[#0D1322] p-4"
+                    >
+                      <p className="text-xs text-slate-300 font-semibold">{cat}</p>
+                      <p className="mt-1 text-2xl font-extrabold text-rose-300">
+                        -${sumCat.toFixed(2)}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* Formulario de Registro de Gasto / Débito */}
+                <form
+                  onSubmit={handleAddDebitExpense}
+                  className="rounded-2xl border border-rose-500/25 bg-[#0D1322] p-5 space-y-3.5"
+                >
+                  <div>
+                    <h3 className="text-base font-bold text-white">
+                      {t("Registrar Débito / Gasto de la Escuela", "Register School Debit / Expense")}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {t(
+                        "Desglosa los egresos por factura, recibo, sueldos y salarios o gasto especial/extraordinario.",
+                        "Break down expenses by invoice, receipt, payroll & salaries or extraordinary expense."
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Tipo de Gasto *", "Expense Type *")}
+                      </label>
+                      <select
+                        value={debitCategory}
+                        onChange={(e) => setDebitCategory(e.target.value as DebitCategory)}
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                      >
+                        <option value="Factura">Factura</option>
+                        <option value="Recibo">Recibo</option>
+                        <option value="Sueldos y Salarios">Sueldos y Salarios</option>
+                        <option value="Gasto Especial / Extraordinario">
+                          Gasto Especial / Extraordinario
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Fecha", "Date")}
+                      </label>
+                      <input
+                        type="date"
+                        value={debitDate}
+                        onChange={(e) => setDebitDate(e.target.value)}
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white [color-scheme:dark]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Nro. Factura / Recibo (opcional)", "Invoice / Receipt # (optional)")}
+                      </label>
+                      <input
+                        type="text"
+                        value={debitDocNum}
+                        onChange={(e) => setDebitDocNum(e.target.value)}
+                        placeholder="Ej. FAC-00412"
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Beneficiario / Proveedor *", "Payee / Provider *")}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={debitBeneficiary}
+                        onChange={(e) => setDebitBeneficiary(e.target.value)}
+                        placeholder={t("Ej. Entrenador / Alquiler Gimnasio", "e.g. Coach / Gym Rent")}
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Concepto / Descripción *", "Concept / Description *")}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={debitConcept}
+                        onChange={(e) => setDebitConcept(e.target.value)}
+                        placeholder={t("Ej. Pago de quincena / Compra colchonetas", "e.g. Payroll / Mat purchase")}
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Monto ($) *", "Amount ($) *")}
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min={0.01}
+                        step="0.01"
+                        value={debitAmount}
+                        onChange={(e) => setDebitAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      {t("Observaciones (opcional)", "Notes (optional)")}
+                    </label>
+                    <input
+                      type="text"
+                      value={debitNotes}
+                      onChange={(e) => setDebitNotes(e.target.value)}
+                      placeholder={t("Detalle adicional del pago", "Additional payment detail")}
+                      className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl bg-rose-500 py-2.5 text-xs font-extrabold text-white hover:bg-rose-400 cursor-pointer"
+                  >
+                    + {t("Registrar Débito / Gasto", "Record Debit / Expense")}
+                  </button>
+                </form>
+
+                {/* Desglose de Débitos Registrados */}
+                <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-base font-bold text-white">
+                      {t("Desglose de Gastos del Mes", "Monthly Expense Breakdown")}
+                    </h3>
+                    <select
+                      value={debitFilterCategory}
+                      onChange={(e) =>
+                        setDebitFilterCategory(e.target.value as DebitCategory | "TODOS")
+                      }
+                      className="rounded-xl border border-white/15 bg-[#070B14] px-3 py-1.5 text-xs text-white"
+                    >
+                      <option value="TODOS">{t("Todos los tipos", "All types")}</option>
+                      <option value="Factura">Factura</option>
+                      <option value="Recibo">Recibo</option>
+                      <option value="Sueldos y Salarios">Sueldos y Salarios</option>
+                      <option value="Gasto Especial / Extraordinario">
+                        Gasto Especial / Extraordinario
+                      </option>
+                    </select>
+                  </div>
+
+                  {(() => {
+                    const visibleDebits =
+                      debitFilterCategory === "TODOS"
+                        ? debitExpensesMonth
+                        : debitExpensesMonth.filter(
+                            (d) => d.category === debitFilterCategory
+                          );
+                    if (visibleDebits.length === 0) {
+                      return (
+                        <p className="py-10 text-center text-xs text-slate-400">
+                          {t(
+                            "No hay gastos registrados con este filtro en el mes.",
+                            "No expenses recorded for this filter in the selected month."
+                          )}
+                        </p>
+                      );
+                    }
+                    return (
+                      <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                        {visibleDebits.map((d) => (
+                          <div
+                            key={d.id}
+                            className="flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-[#070B14]/80 p-3 text-xs"
+                          >
+                            <div className="min-w-0 space-y-0.5">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-200">
+                                  {d.category}
+                                </span>
+                                {d.documentNumber && (
+                                  <span className="font-mono text-[10px] text-amber-300">
+                                    #{d.documentNumber}
+                                  </span>
+                                )}
+                                <span className="font-mono text-[10px] text-slate-400">
+                                  {d.date}
+                                </span>
+                              </div>
+                              <p className="font-bold text-white">{d.concept}</p>
+                              <p className="text-[11px] text-slate-300">
+                                {t("Beneficiario:", "Payee:")} {d.beneficiary}
+                              </p>
+                              {d.notes && (
+                                <p className="text-[11px] text-slate-400">{d.notes}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-mono text-sm font-extrabold text-rose-300">
+                                -${d.amount.toFixed(2)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDebitExpense(d.id)}
+                                className="rounded-lg border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
