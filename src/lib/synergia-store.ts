@@ -62,6 +62,7 @@ export interface RegistrationApplication {
   assignedCategory?: string;
   assignedPosition?: string;
   evaluation?: AthleteEvaluation;
+  evaluationHistory?: AthleteEvaluation[];
 }
 
 export interface AthleteProfile {

@@ -3,6 +3,7 @@
 import { ChangeEvent, useEffect, useState, FormEvent } from "react";
 import {
   ActivityScore,
+  AthleteEvaluation,
   AthleteProfile,
   AuditActionType,
   CHEER_CATEGORIES,
@@ -125,11 +126,9 @@ export function CoachDashboard({
   const [formalizeCategory, setFormalizeCategory] = useState(
     CHEER_CATEGORIES[0]
   );
-  const [formalizePosition, setFormalizePosition] = useState(
-    CHEER_POSITIONS[0]
-  );
 
   // Formularios builder state
+  const [editingFormId, setEditingFormId] = useState<string | null>(null);
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState(CHEER_CATEGORIES[0]);
   const [draftActivities, setDraftActivities] = useState<EvaluationActivity[]>(
@@ -395,7 +394,7 @@ export function CoachDashboard({
       email: app.email,
       phone: app.phone,
       category: formalizeCategory,
-      position: formalizePosition,
+      position: app.assignedPosition || "Por definir",
       bloodType: "",
       hasAllergies: false,
       allergiesDetail: "",
@@ -415,7 +414,6 @@ export function CoachDashboard({
             ...item,
             status: "formalizado" as const,
             assignedCategory: formalizeCategory,
-            assignedPosition: formalizePosition,
           }
         : item
     );
@@ -453,7 +451,6 @@ export function CoachDashboard({
       `🪪 *Documento / Cédula:* ${newAthlete.documentId}`,
       `🆔 *ID Oficial:* ${newAthlete.athleteId}`,
       `🏆 *Categoría Asignada:* ${newAthlete.category}`,
-      `🤸 *Posición:* ${newAthlete.position}`,
       ...(app.isMinor && app.repName
         ? [`👨‍👩‍👧 *Representante:* ${app.repName}`]
         : []),
@@ -504,6 +501,29 @@ export function CoachDashboard({
     e.preventDefault();
     if (!formName.trim() || draftActivities.length === 0) return;
 
+    if (editingFormId) {
+      const updatedForms = state.forms.map((f) =>
+        f.id === editingFormId
+          ? {
+              ...f,
+              name: formName.trim(),
+              category: formCategory,
+              activities: draftActivities,
+            }
+          : f
+      );
+      logAndCommit(
+        { ...state, forms: updatedForms },
+        "MODIFICACION",
+        "Formularios",
+        `Formulario de evaluación "${formName.trim()}" (${formCategory}) actualizado.`
+      );
+      setEditingFormId(null);
+      setFormName("");
+      setDraftActivities([]);
+      return;
+    }
+
     const newTemplate: EvaluationFormTemplate = {
       id: `form-${Date.now()}`,
       name: formName.trim(),
@@ -511,13 +531,47 @@ export function CoachDashboard({
       activities: draftActivities,
     };
 
-    commitState({
-      ...state,
-      forms: [newTemplate, ...state.forms],
-    });
+    logAndCommit(
+      {
+        ...state,
+        forms: [newTemplate, ...state.forms],
+      },
+      "CREACION",
+      "Formularios",
+      `Nuevo formulario creado: "${newTemplate.name}" (${newTemplate.category}).`
+    );
 
     setFormName("");
     setDraftActivities([]);
+  }
+
+  function handleStartEditForm(form: EvaluationFormTemplate) {
+    setEditingFormId(form.id);
+    setFormName(form.name);
+    setFormCategory(form.category);
+    setDraftActivities(form.activities.map((a) => ({ ...a })));
+  }
+
+  function handleCancelEditForm() {
+    setEditingFormId(null);
+    setFormName("");
+    setFormCategory(CHEER_CATEGORIES[0]);
+    setDraftActivities([]);
+  }
+
+  function handleDeleteFormTemplate(formId: string) {
+    if (state.forms.length <= 1) return;
+    const targetForm = state.forms.find((f) => f.id === formId);
+    const updatedForms = state.forms.filter((f) => f.id !== formId);
+    if (editingFormId === formId) {
+      handleCancelEditForm();
+    }
+    logAndCommit(
+      { ...state, forms: updatedForms },
+      "ELIMINACION",
+      "Formularios",
+      `Formulario "${targetForm?.name ?? formId}" eliminado.`
+    );
   }
 
   // --- EVALUACION ACTIONS ---
@@ -643,6 +697,29 @@ export function CoachDashboard({
     );
   }
 
+  function handleStartNewAdditionalEval() {
+    const template =
+      state.forms.find((f) => f.id === evalFormId) ?? state.forms[0];
+    if (!template) return;
+    setEvalFormId(template.id);
+    setEvalItems(
+      template.activities.map((act) => ({
+        activityId: act.id,
+        description: act.description,
+        weight: act.weight,
+        checked: false,
+        score: 0,
+      }))
+    );
+    setEvalNotes("");
+    setEvalSavedMsg(
+      t(
+        "Lista de actividades reiniciada para nueva prueba / evaluación adicional.",
+        "Activity checklist reset for a new additional test / evaluation."
+      )
+    );
+  }
+
   function handleSaveEvaluation() {
     if (!selectedEvalAppId) return;
     const template = state.forms.find((f) => f.id === evalFormId);
@@ -651,28 +728,32 @@ export function CoachDashboard({
     const totalScore = evalItems.reduce((sum, i) => sum + i.score, 0);
     const maxScore = evalItems.reduce((sum, i) => sum + i.weight, 0);
 
-    const updatedApps = state.applications.map((app) =>
-      app.id === selectedEvalAppId
-        ? {
-            ...app,
-            status:
-              app.status === "formalizado"
-                ? ("formalizado" as const)
-                : ("evaluado" as const),
-            assignedFormId: template.id,
-            evaluation: {
-              formId: template.id,
-              formName: template.name,
-              category: template.category,
-              evaluatedAt: new Date().toISOString(),
-              items: evalItems,
-              totalScore,
-              maxScore,
-              coachNotes: evalNotes,
-            },
-          }
-        : app
-    );
+    const newEval: AthleteEvaluation = {
+      formId: template.id,
+      formName: template.name,
+      category: template.category,
+      evaluatedAt: new Date().toISOString(),
+      items: evalItems,
+      totalScore,
+      maxScore,
+      coachNotes: evalNotes,
+    };
+
+    const updatedApps = state.applications.map((app) => {
+      if (app.id !== selectedEvalAppId) return app;
+      const prevHistory =
+        app.evaluationHistory ?? (app.evaluation ? [app.evaluation] : []);
+      return {
+        ...app,
+        status:
+          app.status === "formalizado"
+            ? ("formalizado" as const)
+            : ("evaluado" as const),
+        assignedFormId: template.id,
+        evaluation: newEval,
+        evaluationHistory: [newEval, ...prevHistory],
+      };
+    });
 
     const evalApp = state.applications.find((a) => a.id === selectedEvalAppId);
     logAndCommit(
@@ -1855,7 +1936,9 @@ export function CoachDashboard({
           >
             <div>
               <h2 className="text-xl font-bold text-white">
-                Crear Formulario de Evaluación
+                {editingFormId
+                  ? t("Editar Formulario de Evaluación", "Edit Evaluation Form")
+                  : t("Crear Formulario de Evaluación", "Create Evaluation Form")}
               </h2>
               <p className="text-xs text-slate-400 mt-1">
                 Agrega actividades con su descripción y ponderación, y clasifica
@@ -1945,13 +2028,26 @@ export function CoachDashboard({
               )}
             </div>
 
-            <button
-              type="submit"
-              disabled={draftActivities.length === 0}
-              className="w-full rounded-xl bg-emerald-500 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-40 cursor-pointer"
-            >
-              Guardar Formulario
-            </button>
+            <div className="flex flex-wrap gap-2">
+              {editingFormId && (
+                <button
+                  type="button"
+                  onClick={handleCancelEditForm}
+                  className="rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/5 cursor-pointer"
+                >
+                  {t("Cancelar Edición", "Cancel Edit")}
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={draftActivities.length === 0}
+                className="flex-1 rounded-xl bg-emerald-500 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-40 cursor-pointer"
+              >
+                {editingFormId
+                  ? t("Actualizar Formulario", "Update Form")
+                  : t("Guardar Formulario", "Save Form")}
+              </button>
+            </div>
           </form>
 
           {/* Lista de formularios guardados / predeterminados */}
@@ -1962,18 +2058,40 @@ export function CoachDashboard({
             {state.forms.map((form) => (
               <div
                 key={form.id}
-                className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-3"
+                className={`rounded-2xl border p-5 space-y-3 ${
+                  editingFormId === form.id
+                    ? "border-emerald-400/60 bg-emerald-500/5"
+                    : "border-white/10 bg-[#0D1322]"
+                }`}
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <h3 className="font-bold text-white">{form.name}</h3>
                     <p className="text-xs text-amber-300">{form.category}</p>
                   </div>
-                  {form.isDefault && (
-                    <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold text-slate-300">
-                      Predeterminado
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {form.isDefault && (
+                      <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold text-slate-300">
+                        Predeterminado
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditForm(form)}
+                      className="rounded-lg border border-sky-400/40 bg-sky-500/15 px-2.5 py-1 text-[11px] font-bold text-sky-200 hover:bg-sky-500/25 cursor-pointer"
+                    >
+                      {t("Editar", "Edit")}
+                    </button>
+                    {state.forms.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteFormTemplate(form.id)}
+                        className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-[11px] font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                      >
+                        {t("Eliminar", "Delete")}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <ul className="space-y-1.5 text-xs text-slate-300">
@@ -2118,17 +2236,26 @@ export function CoachDashboard({
                     )}
                   </div>
 
-                  <select
-                    value={evalFormId}
-                    onChange={(e) => handleChangeEvalForm(e.target.value)}
-                    className="rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2 text-xs font-semibold text-white focus:border-emerald-400 focus:outline-none"
-                  >
-                    {state.forms.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={evalFormId}
+                      onChange={(e) => handleChangeEvalForm(e.target.value)}
+                      className="rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2 text-xs font-semibold text-white focus:border-emerald-400 focus:outline-none"
+                    >
+                      {state.forms.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleStartNewAdditionalEval}
+                      className="rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-500/25 cursor-pointer"
+                    >
+                      + {t("Nueva Prueba", "New Test")}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -2258,6 +2385,65 @@ export function CoachDashboard({
                     </button>
                   </div>
                 )}
+
+                {(() => {
+                  const evalList =
+                    currentEvalApp.evaluationHistory &&
+                    currentEvalApp.evaluationHistory.length > 0
+                      ? currentEvalApp.evaluationHistory
+                      : currentEvalApp.evaluation
+                      ? [currentEvalApp.evaluation]
+                      : [];
+                  if (evalList.length === 0) return null;
+                  return (
+                    <div className="rounded-xl border border-white/10 bg-[#070B14]/70 p-4 space-y-2.5">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                        {t(
+                          `Historial de Pruebas y Evaluaciones (${evalList.length})`,
+                          `Evaluation & Test History (${evalList.length})`
+                        )}
+                      </p>
+                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                        {evalList.map((pastEval, idx) => (
+                          <div
+                            key={`${pastEval.evaluatedAt}-${idx}`}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border border-white/10 bg-[#0D1322] p-3 text-xs"
+                          >
+                            <div className="min-w-0">
+                              <p className="font-bold text-white truncate">
+                                {pastEval.formName}{" "}
+                                <span className="font-mono text-emerald-300">
+                                  ({pastEval.totalScore}/{pastEval.maxScore} pts)
+                                </span>
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {new Date(pastEval.evaluatedAt).toLocaleString("es-VE")} ·{" "}
+                                {pastEval.category}
+                              </p>
+                              {pastEval.coachNotes && (
+                                <p className="text-[11px] text-slate-300 italic mt-0.5 truncate">
+                                  &ldquo;{pastEval.coachNotes}&rdquo;
+                                </p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                generateEvaluationPdf({
+                                  ...currentEvalApp,
+                                  evaluation: pastEval,
+                                })
+                              }
+                              className="shrink-0 rounded-lg border border-amber-400/40 bg-amber-400/15 px-3 py-1.5 text-[11px] font-bold text-amber-200 hover:bg-amber-400/25 cursor-pointer"
+                            >
+                              {t("Generar PDF", "Generate PDF")}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {evalSavedMsg && (
                   <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-200">
@@ -4253,7 +4439,7 @@ export function CoachDashboard({
               Formalizar Inscripción del Atleta
             </h3>
             <p className="text-xs text-slate-400">
-              Determina la categoría y posición final. Al formalizar, se creará
+              Determina la categoría final. Al formalizar, se creará
               el perfil del atleta con su ID único, usuario (inicial + apellido)
               y clave provisional <strong className="text-amber-300">123456</strong>.
             </p>
@@ -4269,22 +4455,6 @@ export function CoachDashboard({
                 {CHEER_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
                     {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-200">
-                Posición asignada *
-              </label>
-              <select
-                value={formalizePosition}
-                onChange={(e) => setFormalizePosition(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2.5 text-sm text-white"
-              >
-                {CHEER_POSITIONS.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
                   </option>
                 ))}
               </select>
