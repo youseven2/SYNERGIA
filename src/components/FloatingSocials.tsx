@@ -39,7 +39,7 @@ const LOCATIONS: Record<
     address: string;
     mapsHref: string;
     embedSrc: string;
-    videoSrc: string;
+    videos: { src: string; labelEs: string; labelEn: string }[];
     accent: string;
   }
 > = {
@@ -53,7 +53,13 @@ const LOCATIONS: Record<
     mapsHref: "https://maps.app.goo.gl/CJdCAN3NnCqsErXAA?g_st=aw",
     embedSrc:
       "https://maps.google.com/maps?q=Sede+Principal+Club+De+Porrismo+Synergia+All+Stars+Los+Dos+Caminos,+Av+El+Centro,+Caracas+1071,+Miranda&z=16&output=embed",
-    videoSrc: "/como-llegar.mp4",
+    videos: [
+      {
+        src: "/como-llegar.mp4",
+        labelEs: "Video Cómo Llegar",
+        labelEn: "Directions Video",
+      },
+    ],
     accent: "from-[#00B7A4] to-emerald-500",
   },
   "bellas-artes": {
@@ -66,7 +72,18 @@ const LOCATIONS: Record<
     mapsHref: "https://maps.app.goo.gl/6zn5GhKKC9QA9aXx5?g_st=aw",
     embedSrc:
       "https://maps.google.com/maps?q=Galeria+de+Arte+Nacional,+Bellas+Artes,+Caracas,+Venezuela&z=16&output=embed",
-    videoSrc: "/como-llegar-bellas-artes.mp4",
+    videos: [
+      {
+        src: "/como-llegar-bellas-artes-1.mp4",
+        labelEs: "Video 1 · Ruta Bellas Artes",
+        labelEn: "Video 1 · Bellas Artes Route",
+      },
+      {
+        src: "/como-llegar-bellas-artes-2.mp4",
+        labelEs: "Video 2 · Acceso Gimnasio",
+        labelEn: "Video 2 · Gym Entrance",
+      },
+    ],
     accent: "from-[#7E3D97] to-fuchsia-500",
   },
 };
@@ -78,6 +95,7 @@ export function FloatingSocials() {
   const [waOpen, setWaOpen] = useState(false);
   const [locMenuOpen, setLocMenuOpen] = useState(false);
   const [activeLocation, setActiveLocation] = useState<LocationId | null>(null);
+  const [activeVideoIdx, setActiveVideoIdx] = useState(0);
   const containerRef = useRef<HTMLElement | null>(null);
 
   const isSystemRoute = pathname?.startsWith("/sistema");
@@ -224,6 +242,7 @@ export function FloatingSocials() {
                   type="button"
                   onClick={() => {
                     setLocMenuOpen(false);
+                    setActiveVideoIdx(0);
                     setActiveLocation(loc.id);
                   }}
                   className="group flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[#00B7A4]/50 hover:bg-[#00B7A4]/10 cursor-pointer"
@@ -385,13 +404,33 @@ export function FloatingSocials() {
 
               {/* Video Referencial de Cómo Llegar */}
               <div className="flex flex-col space-y-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-purple-200">
-                  {t("Video Referencial de Cómo Llegar", "Directions Reference Video")}
-                </span>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-purple-200">
+                    {t("Video Referencial de Cómo Llegar", "Directions Reference Video")}
+                  </span>
+                  {currentLoc.videos.length > 1 && (
+                    <div className="flex items-center gap-1.5">
+                      {currentLoc.videos.map((vid, idx) => (
+                        <button
+                          key={vid.src}
+                          type="button"
+                          onClick={() => setActiveVideoIdx(idx)}
+                          className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-colors cursor-pointer ${
+                            activeVideoIdx === idx
+                              ? "bg-[#7E3D97] text-white"
+                              : "border border-white/15 bg-white/5 text-slate-300 hover:bg-white/10"
+                          }`}
+                        >
+                          {t(vid.labelEs, vid.labelEn)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="overflow-hidden rounded-2xl border border-[#9D5BB8]/35 bg-[#070B14] h-[260px] sm:h-[340px] lg:h-[400px] flex items-center justify-center">
                   <video
-                    key={currentLoc.videoSrc}
-                    src={currentLoc.videoSrc}
+                    key={currentLoc.videos[activeVideoIdx]?.src ?? currentLoc.videos[0].src}
+                    src={currentLoc.videos[activeVideoIdx]?.src ?? currentLoc.videos[0].src}
                     controls
                     playsInline
                     preload="metadata"
