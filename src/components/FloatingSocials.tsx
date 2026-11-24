@@ -26,12 +26,58 @@ const WHATSAPP_CONTACTS = [
   },
 ];
 
+type LocationId = "dos-caminos" | "bellas-artes";
+
+const LOCATIONS: Record<
+  LocationId,
+  {
+    id: LocationId;
+    badgeEs: string;
+    badgeEn: string;
+    nameEs: string;
+    nameEn: string;
+    address: string;
+    mapsHref: string;
+    embedSrc: string;
+    videoSrc: string;
+    accent: string;
+  }
+> = {
+  "dos-caminos": {
+    id: "dos-caminos",
+    badgeEs: "Sede Principal · SYNERGIA ALL STARS",
+    badgeEn: "Main Headquarters · SYNERGIA ALL STARS",
+    nameEs: "Sede Los Dos Caminos",
+    nameEn: "Los Dos Caminos Headquarters",
+    address: "Los Dos Caminos, Av. El Centro, Caracas 1071, Miranda",
+    mapsHref: "https://maps.app.goo.gl/CJdCAN3NnCqsErXAA?g_st=aw",
+    embedSrc:
+      "https://maps.google.com/maps?q=Sede+Principal+Club+De+Porrismo+Synergia+All+Stars+Los+Dos+Caminos,+Av+El+Centro,+Caracas+1071,+Miranda&z=16&output=embed",
+    videoSrc: "/como-llegar.mp4",
+    accent: "from-[#00B7A4] to-emerald-500",
+  },
+  "bellas-artes": {
+    id: "bellas-artes",
+    badgeEs: "Segunda Sede · SYNERGIA ALL STARS",
+    badgeEn: "Second Headquarters · SYNERGIA ALL STARS",
+    nameEs: "Sede Bellas Artes",
+    nameEn: "Bellas Artes Headquarters",
+    address: "Bellas Artes, Galería de Arte Nacional, Caracas 1010, Distrito Capital",
+    mapsHref: "https://maps.app.goo.gl/6zn5GhKKC9QA9aXx5?g_st=aw",
+    embedSrc:
+      "https://maps.google.com/maps?q=Galeria+de+Arte+Nacional,+Bellas+Artes,+Caracas,+Venezuela&z=16&output=embed",
+    videoSrc: "/como-llegar-bellas-artes.mp4",
+    accent: "from-[#7E3D97] to-fuchsia-500",
+  },
+};
+
 export function FloatingSocials() {
   const pathname = usePathname();
   const { isMobile } = useDevice();
   const { t } = useI18n();
   const [waOpen, setWaOpen] = useState(false);
-  const [mapOpen, setMapOpen] = useState(false);
+  const [locMenuOpen, setLocMenuOpen] = useState(false);
+  const [activeLocation, setActiveLocation] = useState<LocationId | null>(null);
   const containerRef = useRef<HTMLElement | null>(null);
 
   const isSystemRoute = pathname?.startsWith("/sistema");
@@ -43,12 +89,14 @@ export function FloatingSocials() {
         !containerRef.current.contains(e.target as Node)
       ) {
         setWaOpen(false);
+        setLocMenuOpen(false);
       }
     }
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setWaOpen(false);
-        setMapOpen(false);
+        setLocMenuOpen(false);
+        setActiveLocation(null);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -143,15 +191,76 @@ export function FloatingSocials() {
         </div>
       )}
 
+      {/* Ventana selectora de Sedes (Los Dos Caminos / Bellas Artes) */}
+      {locMenuOpen && (
+        <div className="mb-1 w-[290px] sm:w-[320px] overflow-hidden rounded-[28px] border border-white/15 bg-[#0B1120]/95 shadow-[0_24px_60px_rgba(0,0,0,0.65)] backdrop-blur-xl transition-all">
+          <div className="relative bg-gradient-to-r from-[#00B7A4]/25 via-[#0D1628] to-[#7E3D97]/30 px-5 py-4 border-b border-white/10">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-extrabold tracking-wide text-white">
+                  {t("Nuestras Sedes", "Our Locations")}
+                </p>
+                <p className="text-[10px] font-medium text-[#4CE4D4]">
+                  {t("Elige una sede para ver mapa y video", "Choose a location for map & video")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLocMenuOpen(false)}
+                aria-label={t("Cerrar", "Close")}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-xs text-slate-300 hover:bg-white/20 hover:text-white transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div className="p-3.5 space-y-2.5">
+            {(["dos-caminos", "bellas-artes"] as LocationId[]).map((locKey, idx) => {
+              const loc = LOCATIONS[locKey];
+              return (
+                <button
+                  key={loc.id}
+                  type="button"
+                  onClick={() => {
+                    setLocMenuOpen(false);
+                    setActiveLocation(loc.id);
+                  }}
+                  className="group flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[#00B7A4]/50 hover:bg-[#00B7A4]/10 cursor-pointer"
+                >
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${loc.accent} text-xs font-black text-white shadow-md`}
+                  >
+                    0{idx + 1}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white group-hover:text-[#4CE4D4] transition-colors">
+                      {t(loc.nameEs, loc.nameEn)}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-slate-400 line-clamp-2">
+                      {loc.address}
+                    </p>
+                  </div>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#00B7A4]/15 text-xs font-bold text-[#4CE4D4] group-hover:bg-[#00B7A4] group-hover:text-slate-950 transition-colors">
+                    →
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Ubicación (Mapa + Video) */}
       <button
         type="button"
         onClick={() => {
           setWaOpen(false);
-          setMapOpen(true);
+          setLocMenuOpen((prev) => !prev);
         }}
         title={t("Nuestra Ubicación y Cómo Llegar", "Our Location & How to Get Here")}
         aria-label={t("Ubicación", "Location")}
+        aria-expanded={locMenuOpen}
         className={`group flex ${btnSize} items-center justify-center rounded-full border border-[#9D5BB8]/60 bg-gradient-to-br from-[#00B7A4] to-[#7E3D97] text-white shadow-lg shadow-[#7E3D97]/30 transition-all duration-200 hover:scale-110 hover:shadow-[#00B7A4]/45 cursor-pointer`}
       >
         <svg
@@ -195,7 +304,10 @@ export function FloatingSocials() {
       {/* WhatsApp */}
       <button
         type="button"
-        onClick={() => setWaOpen((prev) => !prev)}
+        onClick={() => {
+          setLocMenuOpen(false);
+          setWaOpen((prev) => !prev);
+        }}
         title={t("Escríbenos por WhatsApp", "Chat on WhatsApp")}
         aria-label="WhatsApp"
         aria-expanded={waOpen}
@@ -207,86 +319,91 @@ export function FloatingSocials() {
       </button>
     </aside>
 
-    {/* Ventana flotante centrada de Ubicación (Google Maps + Video) */}
-    {mapOpen && (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-6 backdrop-blur-md print:hidden"
-        onClick={() => setMapOpen(false)}
-      >
+    {/* Ventana flotante separada por Sede (Google Maps + Video) */}
+    {activeLocation && (() => {
+      const currentLoc = LOCATIONS[activeLocation];
+      return (
         <div
-          className="w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-[28px] border border-white/15 bg-[#0B1120] shadow-[0_28px_80px_rgba(0,0,0,0.8)]"
-          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-6 backdrop-blur-md print:hidden"
+          onClick={() => setActiveLocation(null)}
         >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-r from-[#00B7A4]/20 via-[#0D1628] to-[#7E3D97]/25 px-5 py-4 sm:px-7">
-            <div>
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#4CE4D4]">
-                {t("Sede Principal · SYNERGIA ALL STARS", "Main Headquarters · SYNERGIA ALL STARS")}
-              </span>
-              <h2 className="mt-0.5 text-lg sm:text-xl font-extrabold text-white">
-                {t("Ubicación y Video de Cómo Llegar", "Location & Directions Video")}
-              </h2>
-              <p className="text-xs text-slate-300 mt-0.5">
-                Los Dos Caminos, Av. El Centro, Caracas 1071, Miranda
-              </p>
-            </div>
+          <div
+            className="w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-[28px] border border-white/15 bg-[#0B1120] shadow-[0_28px_80px_rgba(0,0,0,0.8)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-r from-[#00B7A4]/20 via-[#0D1628] to-[#7E3D97]/25 px-5 py-4 sm:px-7">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#4CE4D4]">
+                  {t(currentLoc.badgeEs, currentLoc.badgeEn)}
+                </span>
+                <h2 className="mt-0.5 text-lg sm:text-xl font-extrabold text-white">
+                  {t(currentLoc.nameEs, currentLoc.nameEn)} ·{" "}
+                  {t("Ubicación y Video de Cómo Llegar", "Location & Directions Video")}
+                </h2>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  {currentLoc.address}
+                </p>
+              </div>
 
-            <div className="flex items-center gap-2.5 shrink-0">
-              <a
-                href="https://maps.app.goo.gl/CJdCAN3NnCqsErXAA?g_st=aw"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#00B7A4] px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-[#14CEBA] transition-colors"
-              >
-                {t("Abrir en Google Maps", "Open in Google Maps")} ↗
-              </a>
-              <button
-                type="button"
-                onClick={() => setMapOpen(false)}
-                aria-label={t("Cerrar", "Close")}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10 text-sm text-white hover:bg-white/20 transition-colors cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-2">
-            {/* Mapa Google Maps */}
-            <div className="flex flex-col space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                {t("Mapa de Ubicación", "Location Map")}
-              </span>
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#070B14] h-[260px] sm:h-[340px] lg:h-[400px]">
-                <iframe
-                  title="Mapa Sede Principal SYNERGIA ALL STARS"
-                  src="https://maps.google.com/maps?q=Sede+Principal+Club+De+Porrismo+Synergia+All+Stars+Los+Dos+Caminos,+Av+El+Centro,+Caracas+1071,+Miranda&z=16&output=embed"
-                  className="h-full w-full border-0"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  allowFullScreen
-                />
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <a
+                  href={currentLoc.mapsHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#00B7A4] px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-[#14CEBA] transition-colors"
+                >
+                  {t("Abrir en Google Maps", "Open in Google Maps")} ↗
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setActiveLocation(null)}
+                  aria-label={t("Cerrar", "Close")}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10 text-sm text-white hover:bg-white/20 transition-colors cursor-pointer"
+                >
+                  ✕
+                </button>
               </div>
             </div>
 
-            {/* Video Referencial de Cómo Llegar */}
-            <div className="flex flex-col space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-purple-200">
-                {t("Video Referencial de Cómo Llegar", "Directions Reference Video")}
-              </span>
-              <div className="overflow-hidden rounded-2xl border border-[#9D5BB8]/35 bg-[#070B14] h-[260px] sm:h-[340px] lg:h-[400px] flex items-center justify-center">
-                <video
-                  src="/como-llegar.mp4"
-                  controls
-                  playsInline
-                  preload="metadata"
-                  className="h-full w-full object-contain"
-                />
+            <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-2">
+              {/* Mapa Google Maps */}
+              <div className="flex flex-col space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  {t("Mapa de Ubicación", "Location Map")}
+                </span>
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#070B14] h-[260px] sm:h-[340px] lg:h-[400px]">
+                  <iframe
+                    title={`Mapa ${currentLoc.nameEs}`}
+                    src={currentLoc.embedSrc}
+                    className="h-full w-full border-0"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+
+              {/* Video Referencial de Cómo Llegar */}
+              <div className="flex flex-col space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-200">
+                  {t("Video Referencial de Cómo Llegar", "Directions Reference Video")}
+                </span>
+                <div className="overflow-hidden rounded-2xl border border-[#9D5BB8]/35 bg-[#070B14] h-[260px] sm:h-[340px] lg:h-[400px] flex items-center justify-center">
+                  <video
+                    key={currentLoc.videoSrc}
+                    src={currentLoc.videoSrc}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    )}
+      );
+    })()}
     </>
   );
 }
