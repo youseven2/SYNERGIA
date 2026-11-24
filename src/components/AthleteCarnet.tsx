@@ -152,22 +152,22 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
               <div className="w-2/5 bg-[#7E3D97]" />
             </div>
 
-            <div className="flex flex-col items-center px-3 pt-2.5 pb-2 print:px-2 print:pt-1.5 print:pb-1 text-center border-b border-slate-200/70 bg-white/75 backdrop-blur-[1px]">
+            <div className="flex flex-col items-center px-3 pt-2 pb-1.5 print:px-2 print:pt-1 print:pb-0.5 text-center border-b border-slate-200/70 bg-white/75 backdrop-blur-[1px]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/synergia-logo.svg"
                 alt="SYNERGIA ALL STARS"
-                className="h-9 print:h-6 w-auto object-contain"
+                className="h-14 print:h-9 w-auto object-contain"
               />
-              <span className="mt-1 rounded-full bg-[#7E3D97] px-3 py-0.5 text-[10px] print:text-[7px] font-extrabold uppercase tracking-[0.16em] text-white">
+              <span className="mt-0.5 rounded-full bg-[#7E3D97] px-2 py-[1px] text-[8px] print:text-[5.5px] font-bold uppercase tracking-[0.14em] text-white">
                 ATLETA OFICIAL
               </span>
             </div>
           </div>
 
           {/* Foto y Datos Centrales con letras más grandes */}
-          <div className="relative z-10 flex flex-col items-center px-3.5 py-2 print:px-2 print:py-1 text-center space-y-2 print:space-y-1">
-            <div className="h-24 w-20 print:h-16 print:w-14 overflow-hidden rounded-xl border-2 border-[#00B7A4] bg-white shadow-sm flex items-center justify-center">
+          <div className="relative z-10 flex flex-col items-center px-3.5 py-1.5 print:px-2 print:py-1 text-center space-y-1.5 print:space-y-1">
+            <div className="h-20 w-[68px] print:h-[14mm] print:w-[11.5mm] overflow-hidden rounded-xl border-2 border-[#00B7A4] bg-white shadow-sm flex items-center justify-center">
               {athlete.photoDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
