@@ -9,13 +9,13 @@ import {
   PaymentMethod,
   SynergiaState,
   calculateAge,
+  createRecordId,
   getAthletePaymentStatus,
   getCurrentMonthKey,
   saveSynergiaState,
 } from "@/lib/synergia-store";
 import { generateAthleteProfilePdf } from "@/lib/pdf-report";
 import { AthleteCarnet } from "@/components/AthleteCarnet";
-import { AttendanceControl } from "@/components/sistema/AttendanceControl";
 import { useDevice } from "@/components/DeviceContext";
 import { useI18n } from "@/components/I18nContext";
 
@@ -117,6 +117,11 @@ export function AthletePortal({
 
   // Módulo de Pagos state
   const currentMonth = getCurrentMonthKey();
+  const [paymentConcept, setPaymentConcept] = useState<
+    "mensualidad" | "solicitud_material" | "actividad_especial"
+  >("mensualidad");
+  const [selectedRequestId, setSelectedRequestId] = useState("");
+  const [selectedChargeId, setSelectedChargeId] = useState("");
   const [payMethod, setPayMethod] = useState<PaymentMethod>("pago_movil");
   const [payMonth, setPayMonth] = useState(currentMonth);
   const [payAmount, setPayAmount] = useState(String(state.monthlyFee || 30));
@@ -160,8 +165,21 @@ export function AthletePortal({
       return;
     }
 
+    let conceptLabel = `Mensualidad ${payMonth}`;
+    if (paymentConcept === "solicitud_material") {
+      const targetReq = myRequests.find((r) => r.id === selectedRequestId);
+      conceptLabel = targetReq
+        ? `Material: ${targetReq.itemType} (${targetReq.detail})`
+        : "Pago de Solicitud de Material";
+    } else if (paymentConcept === "actividad_especial") {
+      const targetChg = (state.specialCharges ?? []).find(
+        (c) => c.id === selectedChargeId
+      );
+      conceptLabel = targetChg ? `Actividad: ${targetChg.title}` : "Actividad / Torneo";
+    }
+
     const newPayment: AthletePayment = {
-      id: `pay-${Date.now()}`,
+      id: createRecordId("pay"),
       athleteId: athlete.athleteId,
       athleteName: athlete.fullName,
       monthKey: payMonth,
@@ -175,6 +193,12 @@ export function AthletePortal({
       notes: payNotes.trim(),
       status: "pendiente",
       createdAt: new Date().toISOString(),
+      paymentConcept,
+      paymentConceptLabel: conceptLabel,
+      relatedRequestId:
+        paymentConcept === "solicitud_material" ? selectedRequestId : undefined,
+      relatedChargeId:
+        paymentConcept === "actividad_especial" ? selectedChargeId : undefined,
     };
 
     commitState({
@@ -592,7 +616,7 @@ export function AthletePortal({
         </div>
       ) : (
         <div
-          className={`gap-3 ${
+          className={`gap-3.5 ${
             isMobile ? "grid grid-cols-1" : "grid grid-cols-2 lg:grid-cols-3"
           }`}
         >
@@ -603,36 +627,48 @@ export function AthletePortal({
                 title: t("Perfil del Atleta", "Athlete Profile"),
                 subtitle: t("Ficha oficial y reporte PDF", "Official sheet & PDF report"),
                 badge: 0,
+                gradient: "from-[#065F46] via-[#0F766E] to-[#0D1322]",
+                icon: "M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z",
               },
               {
                 key: "carnet",
-                title: t("Carnet", "ID Card"),
+                title: t("Carnet Oficial", "Official ID Card"),
                 subtitle: t("Carnet vertical oficial con QR", "Vertical official ID card with QR"),
                 badge: 0,
+                gradient: "from-[#4A1C5C] via-[#7E3D97] to-[#0D1322]",
+                icon: "M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z",
               },
               {
                 key: "pagos",
                 title: t("Método de Pago", "Payment Method"),
-                subtitle: t("Transferencia, Pago Móvil, Efectivo", "Transfer, Mobile Pay, Cash"),
+                subtitle: t("Mensualidad, material o actividad", "Monthly fee, material or activity"),
                 badge: unreadNotifs.length,
+                gradient: "from-[#064E3B] via-[#047857] to-[#0D1322]",
+                icon: "M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z",
               },
               {
                 key: "solicitudes",
                 title: t("Solicitudes de Materiales", "Material Requests"),
-                subtitle: t("Uniformes, zapatos, lazos", "Uniforms, shoes, bows"),
-                badge: myRequests.filter((r) => r.status === "pendiente").length,
+                subtitle: t("Uniformes, costo y entrega", "Uniforms, cost & delivery"),
+                badge: myRequests.filter((r) => r.status === "pendiente" || r.coachResponse).length,
+                gradient: "from-[#381B4C] via-[#6D28D9] to-[#0D1322]",
+                icon: "M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z",
               },
               {
                 key: "agenda",
                 title: t("Agenda de Eventos", "Events Agenda"),
-                subtitle: t("Visualización de eventos del club", "View club events"),
+                subtitle: t("Calendario y flyers del club", "Club calendar & flyers"),
                 badge: unreadEventNotices.length,
+                gradient: "from-[#0F172A] via-[#0E7490] to-[#0D1322]",
+                icon: "M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5",
               },
               {
                 key: "asistencia",
-                title: t("Control de Asistencia", "Attendance Control"),
-                subtitle: t("Validar QR o ID de carnet", "Validate QR or ID card"),
-                badge: 0,
+                title: t("Reporte de Asistencia", "Attendance Report"),
+                subtitle: t("Gráfico personal de asistencias", "Personal attendance chart"),
+                badge: state.attendanceRecords.filter((r) => r.athleteId === athlete.athleteId).length,
+                gradient: "from-[#1E1B4B] via-[#0F766E] to-[#0D1322]",
+                icon: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z",
               },
             ] as const
           ).map((mod) => (
@@ -640,21 +676,28 @@ export function AthletePortal({
               key={mod.key}
               type="button"
               onClick={() => setActiveTab(mod.key)}
-              className={`flex items-center justify-between gap-3 rounded-2xl border p-4 text-left transition-all cursor-pointer ${
+              className={`group relative overflow-hidden flex flex-col justify-between gap-3 rounded-2xl border p-4 sm:p-5 text-left transition-all duration-200 hover:scale-[1.015] cursor-pointer bg-gradient-to-br ${mod.gradient} ${
                 activeTab === mod.key
-                  ? "border-[#00B7A4] bg-[#00B7A4]/15 shadow-lg shadow-[#00B7A4]/10"
-                  : "border-white/10 bg-[#0D1322] hover:border-[#9D5BB8]/50 hover:bg-[#131B2E]"
+                  ? "border-[#4CE4D4] ring-2 ring-[#00B7A4]/40 shadow-xl"
+                  : "border-white/15 hover:border-white/35 shadow-lg"
               }`}
             >
-              <div>
-                <p className="text-sm font-extrabold text-white">{mod.title}</p>
-                <p className="mt-0.5 text-[11px] text-slate-400">{mod.subtitle}</p>
-              </div>
-              {mod.badge > 0 && (
-                <span className="rounded-full bg-amber-400/20 px-2.5 py-0.5 text-xs font-extrabold text-amber-300 border border-amber-400/30">
-                  {mod.badge}
+              <div className="flex items-start justify-between gap-2">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-sm">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d={mod.icon} />
+                  </svg>
                 </span>
-              )}
+                {mod.badge > 0 && (
+                  <span className="rounded-full bg-black/40 border border-white/20 px-2.5 py-0.5 text-xs font-extrabold text-amber-300">
+                    {mod.badge}
+                  </span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm sm:text-base font-extrabold text-white">{mod.title}</p>
+                <p className="mt-0.5 text-[11px] text-slate-200/80">{mod.subtitle}</p>
+              </div>
             </button>
           ))}
         </div>
@@ -665,70 +708,244 @@ export function AthletePortal({
       )}
 
       {athlete.profileCompleted && activeTab === "agenda" && (
-        <section className="space-y-4 rounded-3xl border border-white/10 bg-[#0D1322] p-6">
-          <div>
-            <h2 className="text-lg font-bold text-white">
-              {t("Agenda de Eventos SYNERGIA ALL STARS", "SYNERGIA ALL STARS Events Agenda")}
-            </h2>
-            <p className="mt-1 text-xs text-slate-400">
-              {t(
-                "Visualización de eventos programados desde el sistema administrativo.",
-                "Read-only view of events scheduled from the administrative system."
-              )}
-            </p>
+        <section className="space-y-6 rounded-3xl border border-white/10 bg-[#0D1322] p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-5">
+            <div>
+              <span className="inline-block rounded-full bg-[#00B7A4]/15 border border-[#00B7A4]/35 px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#4CE4D4]">
+                SYNERGIA ALL STARS
+              </span>
+              <h2 className="mt-2 text-xl sm:text-2xl font-black tracking-tight text-white">
+                {t("Agenda Oficial de Eventos", "Official Events Agenda")}
+              </h2>
+              <p className="mt-1 text-xs text-slate-400">
+                {t(
+                  "Competencias, evaluaciones, galas y actividades programadas por la academia.",
+                  "Competitions, evaluations, galas and activities scheduled by the academy."
+                )}
+              </p>
+            </div>
+            <div className="self-start rounded-2xl border border-white/10 bg-[#070B14] px-4 py-2.5 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {t("Programados", "Scheduled")}
+              </p>
+              <p className="text-xl font-black text-[#4CE4D4]">{state.events.length}</p>
+            </div>
           </div>
+
           {state.events.length === 0 ? (
-            <p className="py-8 text-center text-xs text-slate-400">
+            <p className="py-12 text-center text-xs text-slate-400">
               {t("No hay eventos programados por el momento.", "No events scheduled at this time.")}
             </p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {state.events.map((ev) => (
-                <div
-                  key={ev.id}
-                  className="rounded-2xl border border-[#00B7A4]/30 bg-[#070B14]/85 p-4 text-xs space-y-1.5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono font-bold text-amber-300">{ev.date}</span>
-                    <span className="rounded-full bg-[#7E3D97]/30 px-2 py-0.5 text-[10px] font-bold text-purple-200">
-                      {ev.category}
-                    </span>
-                  </div>
-                  <p className="text-sm font-bold text-white">{ev.title}</p>
-                  <p className="text-slate-300">{ev.time}</p>
-                  {ev.location && <p className="text-[#4CE4D4]">{ev.location}</p>}
-                  {ev.description && (
-                    <p className="text-slate-400 leading-relaxed">{ev.description}</p>
-                  )}
-                  {ev.flyerDataUrl && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setAthleteFlyerModal({
-                          title: ev.title,
-                          url: ev.flyerDataUrl!,
-                        })
-                      }
-                      className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-[#9D5BB8]/50 bg-[#7E3D97]/25 px-3 py-1.5 text-[11px] font-bold text-purple-100 hover:bg-[#7E3D97]/45 cursor-pointer"
-                    >
-                      {t("Ver Flyer", "View Flyer")}
-                    </button>
-                  )}
-                </div>
-              ))}
+            <div className="grid gap-5 md:grid-cols-2">
+              {state.events.map((ev) => {
+                const [, mStr = "01", dStr = "01"] = ev.date.split("-");
+                const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+                const monthLabel = monthNames[Math.max(0, (Number(mStr) || 1) - 1)] ?? "MES";
+                return (
+                  <article
+                    key={ev.id}
+                    className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0F172A] via-[#0B1120] to-[#1A102B] p-5 transition-all hover:border-[#00B7A4]/50 shadow-lg"
+                  >
+                    <div className="flex items-start gap-4">
+                      {/* Tarjeta de Fecha */}
+                      <div className="flex h-16 w-14 shrink-0 flex-col items-center justify-center rounded-2xl border border-[#00B7A4]/40 bg-[#00B7A4]/15 text-center">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4CE4D4]">
+                          {monthLabel}
+                        </span>
+                        <span className="text-xl font-black leading-none text-white mt-0.5">
+                          {dStr}
+                        </span>
+                      </div>
+
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="rounded-full bg-[#7E3D97]/35 border border-[#9D5BB8]/40 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-purple-100">
+                            {ev.category}
+                          </span>
+                          <span className="font-mono text-[11px] font-semibold text-amber-300">
+                            {ev.time}
+                          </span>
+                        </div>
+
+                        <h3 className="text-base font-extrabold text-white group-hover:text-[#4CE4D4] transition-colors">
+                          {ev.title}
+                        </h3>
+
+                        {ev.location && (
+                          <p className="text-xs font-semibold text-emerald-300">
+                            📍 {ev.location}
+                          </p>
+                        )}
+                        {ev.description && (
+                          <p className="text-xs leading-relaxed text-slate-300">
+                            {ev.description}
+                          </p>
+                        )}
+
+                        {ev.flyerDataUrl && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setAthleteFlyerModal({
+                                title: ev.title,
+                                url: ev.flyerDataUrl!,
+                              })
+                            }
+                            className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-[#7E3D97] px-3.5 py-1.5 text-[11px] font-bold text-white hover:bg-[#914BAE] transition-colors cursor-pointer"
+                          >
+                            🖼️ {t("Ver Flyer del Evento", "View Event Flyer")}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
       )}
 
-      {athlete.profileCompleted && activeTab === "asistencia" && (
-        <AttendanceControl
-          state={state}
-          onStateChange={onStateChange}
-          recordedBy={athlete.username}
-          restrictedAthlete={athlete}
-        />
-      )}
+      {athlete.profileCompleted && activeTab === "asistencia" && (() => {
+        const myAttendance = state.attendanceRecords.filter(
+          (r) => r.athleteId === athlete.athleteId
+        );
+        const qrCount = myAttendance.filter((r) => r.method === "qr").length;
+        const manualCount = myAttendance.filter((r) => r.method === "manual").length;
+        const thisMonthCount = myAttendance.filter((r) =>
+          r.dateKey.startsWith(currentMonth)
+        ).length;
+
+        // Agrupar asistencias por mes (últimos 6 meses registrados o mes actual)
+        const monthCounts = new Map<string, number>();
+        monthCounts.set(currentMonth, thisMonthCount);
+        myAttendance.forEach((r) => {
+          const mk = r.dateKey.slice(0, 7);
+          monthCounts.set(mk, (monthCounts.get(mk) ?? 0) + 1);
+        });
+        // Correct double counting for currentMonth
+        monthCounts.set(currentMonth, thisMonthCount);
+        const chartEntries = Array.from(monthCounts.entries())
+          .sort(([a], [b]) => a.localeCompare(b))
+          .slice(-6);
+        const maxVal = Math.max(1, ...chartEntries.map(([, v]) => v));
+
+        return (
+          <section className="space-y-6 rounded-3xl border border-white/10 bg-[#0D1322] p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  {t("Mi Reporte Gráfico de Asistencia", "My Graphical Attendance Report")}
+                </h2>
+                <p className="mt-1 text-xs text-slate-400">
+                  {t(
+                    `Historial exclusivo de prácticas validadas para ${athlete.fullName} (${athlete.athleteId}).`,
+                    `Exclusive record of validated practices for ${athlete.fullName} (${athlete.athleteId}).`
+                  )}
+                </p>
+              </div>
+              <span className="self-start rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-3 py-1.5 font-mono text-xs font-extrabold text-emerald-300">
+                {athlete.athleteId}
+              </span>
+            </div>
+
+            {/* Tarjetas resumen */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                <p className="text-[11px] font-semibold text-emerald-300">
+                  {t("Total Asistencias", "Total Attendance")}
+                </p>
+                <p className="mt-1 text-2xl font-black text-white">{myAttendance.length}</p>
+              </div>
+              <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4">
+                <p className="text-[11px] font-semibold text-cyan-300">
+                  {t("Mes Actual", "Current Month")}
+                </p>
+                <p className="mt-1 text-2xl font-black text-cyan-200">{thisMonthCount}</p>
+              </div>
+              <div className="rounded-2xl border border-purple-500/30 bg-purple-500/10 p-4">
+                <p className="text-[11px] font-semibold text-purple-200">
+                  {t("Escaneo QR", "QR Scan")}
+                </p>
+                <p className="mt-1 text-2xl font-black text-purple-200">{qrCount}</p>
+              </div>
+              <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4">
+                <p className="text-[11px] font-semibold text-amber-300">
+                  {t("Registro Manual", "Manual Entry")}
+                </p>
+                <p className="mt-1 text-2xl font-black text-amber-200">{manualCount}</p>
+              </div>
+            </div>
+
+            {/* Gráfico de barras mensual */}
+            <div className="rounded-2xl border border-white/10 bg-[#070B14]/80 p-5 space-y-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                {t("Asistencias por Mes", "Monthly Attendance Chart")}
+              </p>
+              <div className="flex items-end justify-around gap-3 h-44 pt-4 border-b border-white/10 pb-2">
+                {chartEntries.map(([mk, count]) => {
+                  const pct = Math.max(8, Math.round((count / maxVal) * 100));
+                  return (
+                    <div key={mk} className="flex flex-1 max-w-[76px] flex-col items-center gap-2 h-full justify-end">
+                      <span className="font-mono text-xs font-extrabold text-[#4CE4D4]">
+                        {count}
+                      </span>
+                      <div
+                        style={{ height: `${pct}%` }}
+                        className="w-full rounded-t-xl bg-gradient-to-t from-[#7E3D97] to-[#00B7A4] shadow-lg shadow-[#00B7A4]/20 transition-all"
+                      />
+                      <span className="font-mono text-[10px] font-semibold text-slate-400">
+                        {mk}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Listado cronológico exclusivo del atleta */}
+            <div className="space-y-2.5">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                {t("Detalle de Prácticas Registradas", "Recorded Practice History")}
+              </p>
+              {myAttendance.length === 0 ? (
+                <p className="rounded-2xl border border-white/10 bg-[#070B14]/60 py-8 text-center text-xs text-slate-400">
+                  {t(
+                    "Aún no tienes asistencias registradas.",
+                    "You do not have any recorded attendance yet."
+                  )}
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {myAttendance.map((rec) => (
+                    <div
+                      key={rec.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-xs"
+                    >
+                      <div>
+                        <p className="font-bold text-white">{rec.dateKey}</p>
+                        <p className="text-[11px] text-slate-400">{rec.category}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
+                          {rec.method === "qr" ? "QR" : "Manual"}
+                        </span>
+                        <span className="font-mono text-[11px] text-slate-300">
+                          {new Date(rec.timestamp).toLocaleTimeString("es-VE", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        );
+      })()}
 
       {(!athlete.profileCompleted || activeTab === "perfil") && (
         <>
@@ -1174,14 +1391,133 @@ export function AthletePortal({
           >
             <div>
               <h2 className="text-lg font-bold text-white">
-                {t("Registrar Pago de Mensualidad", "Register Monthly Payment")}
+                {t("Registrar Pago", "Register Payment")}
               </h2>
               <p className="mt-1 text-xs text-amber-300">
                 {t(
-                  "Los pagos se reciben hasta el día 15 de cada mes. Todo pago es verificado por los entrenadores.",
-                  "Payments are due by the 15th of each month. Every payment is verified by coaches."
+                  "Selecciona el concepto (mensualidad, solicitud de material o actividad/torneo) y adjunta tu comprobante.",
+                  "Select the payment concept (monthly fee, material request, or tournament/activity) and submit proof."
                 )}
               </p>
+            </div>
+
+            {/* Concepto del Pago */}
+            <div className="space-y-3 rounded-2xl border border-white/10 bg-[#070B14]/70 p-3.5">
+              <label className="block text-xs font-semibold text-slate-200">
+                {t("Concepto del Pago *", "Payment Concept *")}
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {(
+                  [
+                    { key: "mensualidad", label: t("Mensualidad", "Monthly Fee") },
+                    { key: "solicitud_material", label: t("Solicitud Material", "Material Request") },
+                    { key: "actividad_especial", label: t("Torneo / Actividad", "Tournament / Activity") },
+                  ] as const
+                ).map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => {
+                      setPaymentConcept(c.key);
+                      if (c.key === "mensualidad") {
+                        setPayAmount(String(state.monthlyFee || 30));
+                      } else if (c.key === "solicitud_material") {
+                        const firstReq = myRequests.find((r) => r.estimatedCost !== undefined) ?? myRequests[0];
+                        if (firstReq) {
+                          setSelectedRequestId(firstReq.id);
+                          if (firstReq.estimatedCost !== undefined) {
+                            setPayAmount(String(firstReq.estimatedCost));
+                          }
+                        }
+                      } else if (c.key === "actividad_especial") {
+                        const firstChg = (state.specialCharges ?? [])[0];
+                        if (firstChg) {
+                          setSelectedChargeId(firstChg.id);
+                          setPayAmount(String(firstChg.amount));
+                        }
+                      }
+                    }}
+                    className={`rounded-xl border py-2 px-2.5 text-xs font-bold transition-all cursor-pointer ${
+                      paymentConcept === c.key
+                        ? "border-purple-400 bg-[#7E3D97]/35 text-purple-100"
+                        : "border-white/15 bg-[#0D1322] text-slate-300 hover:text-white"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+
+              {paymentConcept === "solicitud_material" && (
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    {t("Selecciona tu solicitud de material *", "Select your material request *")}
+                  </label>
+                  {myRequests.length === 0 ? (
+                    <p className="text-[11px] text-amber-300">
+                      {t("No tienes solicitudes de materiales creadas.", "You have no material requests yet.")}
+                    </p>
+                  ) : (
+                    <select
+                      required
+                      value={selectedRequestId}
+                      onChange={(e) => {
+                        setSelectedRequestId(e.target.value);
+                        const found = myRequests.find((r) => r.id === e.target.value);
+                        if (found?.estimatedCost !== undefined) {
+                          setPayAmount(String(found.estimatedCost));
+                        }
+                      }}
+                      className="w-full rounded-xl border border-white/15 bg-[#0D1322] px-3 py-2 text-xs text-white"
+                    >
+                      <option value="">{t("-- Elige una solicitud --", "-- Choose request --")}</option>
+                      {myRequests.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.itemType} (x{r.quantity}) · {r.detail}
+                          {r.estimatedCost !== undefined ? ` — $${r.estimatedCost.toFixed(2)}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+
+              {paymentConcept === "actividad_especial" && (
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    {t("Selecciona el torneo o actividad *", "Select tournament or activity *")}
+                  </label>
+                  {(state.specialCharges ?? []).length === 0 ? (
+                    <p className="text-[11px] text-amber-300">
+                      {t(
+                        "No hay cobros de torneos o actividades publicados por el entrenador.",
+                        "No tournament or activity fees published by coaches yet."
+                      )}
+                    </p>
+                  ) : (
+                    <select
+                      required
+                      value={selectedChargeId}
+                      onChange={(e) => {
+                        setSelectedChargeId(e.target.value);
+                        const found = (state.specialCharges ?? []).find(
+                          (c) => c.id === e.target.value
+                        );
+                        if (found) setPayAmount(String(found.amount));
+                      }}
+                      className="w-full rounded-xl border border-white/15 bg-[#0D1322] px-3 py-2 text-xs text-white"
+                    >
+                      <option value="">{t("-- Elige una actividad --", "-- Choose activity --")}</option>
+                      {(state.specialCharges ?? []).map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.title} — ${c.amount.toFixed(2)}
+                          {c.dueDate ? ` (Límite: ${c.dueDate})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
@@ -1374,10 +1710,15 @@ export function AthletePortal({
                     key={p.id}
                     className="rounded-2xl border border-white/10 bg-[#070B14]/80 p-4 text-xs space-y-1.5"
                   >
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-bold text-white uppercase">
                         {p.method.replace("_", " ")} · {p.monthKey}
                       </span>
+                      {p.paymentConceptLabel && (
+                        <span className="rounded-md bg-purple-500/20 px-2 py-0.5 text-[10px] font-bold text-purple-200">
+                          {p.paymentConceptLabel}
+                        </span>
+                      )}
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
                           p.status === "aprobado"
@@ -1549,6 +1890,46 @@ export function AthletePortal({
                     </div>
                     <p className="text-slate-300">{r.detail}</p>
                     {r.notes && <p className="text-slate-400">{r.notes}</p>}
+                    {(r.estimatedCost !== undefined || r.deliveryDate || r.coachResponse) && (
+                      <div className="mt-2 rounded-xl border border-sky-400/30 bg-sky-500/10 p-3 space-y-1.5">
+                        <p className="text-[11px] font-extrabold uppercase tracking-wider text-sky-300">
+                          {t("Respuesta del Entrenador", "Coach Feedback")}
+                        </p>
+                        <div className="flex flex-wrap gap-3 text-slate-100">
+                          {r.estimatedCost !== undefined && (
+                            <span>
+                              💰 {t("Costo:", "Cost:")}{" "}
+                              <strong className="text-emerald-300">
+                                ${r.estimatedCost.toFixed(2)}
+                              </strong>
+                            </span>
+                          )}
+                          {r.deliveryDate && (
+                            <span>
+                              📅 {t("Entrega estimada:", "Est. delivery:")}{" "}
+                              <strong className="text-amber-300">{r.deliveryDate}</strong>
+                            </span>
+                          )}
+                        </div>
+                        {r.coachResponse && (
+                          <p className="text-slate-200">{r.coachResponse}</p>
+                        )}
+                        {r.estimatedCost !== undefined && r.status !== "entregado" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPaymentConcept("solicitud_material");
+                              setSelectedRequestId(r.id);
+                              setPayAmount(String(r.estimatedCost));
+                              setActiveTab("pagos");
+                            }}
+                            className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-[11px] font-extrabold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+                          >
+                            💳 {t(`Pagar Material ($${r.estimatedCost.toFixed(2)})`, `Pay Material ($${r.estimatedCost.toFixed(2)})`)}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

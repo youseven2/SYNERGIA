@@ -12,6 +12,7 @@ import {
   authenticateSystemUser,
   loadSynergiaState,
   saveSynergiaState,
+  syncSynergiaStateFromServer,
 } from "@/lib/synergia-store";
 import { CoachDashboard } from "@/components/sistema/CoachDashboard";
 import { AthletePortal } from "@/components/sistema/AthletePortal";
@@ -115,6 +116,11 @@ export default function SistemaPage() {
     const raf = requestAnimationFrame(() => {
       const loadedState = loadSynergiaState();
       setState(loadedState);
+      syncSynergiaStateFromServer()
+        .then((syncedState) => {
+          setState(syncedState);
+        })
+        .catch(() => {});
 
       try {
         const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
@@ -226,7 +232,7 @@ export default function SistemaPage() {
     };
   }, [session, handleLogout, t]);
 
-  function handleLogin(e: FormEvent<HTMLFormElement>) {
+  async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoginError(null);
 
@@ -242,7 +248,7 @@ export default function SistemaPage() {
       return;
     }
 
-    const freshState = loadSynergiaState();
+    const freshState = await syncSynergiaStateFromServer();
     setState(freshState);
 
     // 1. Detectar automáticamente si corresponde a Entrenador / Administrador

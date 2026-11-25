@@ -15,6 +15,7 @@ import {
   EvaluationFormTemplate,
   RegistrationApplication,
   RequestStatus,
+  SpecialCharge,
   SynergiaEvent,
   SynergiaState,
   SystemUser,
@@ -227,6 +228,13 @@ export function CoachDashboard({
   const [debitAmount, setDebitAmount] = useState("");
   const [debitNotes, setDebitNotes] = useState("");
   const [debitFilterCategory, setDebitFilterCategory] = useState<DebitCategory | "TODOS">("TODOS");
+  const [chargeTitle, setChargeTitle] = useState("");
+  const [chargeAmount, setChargeAmount] = useState("");
+  const [chargeDueDate, setChargeDueDate] = useState("");
+  const [chargeDesc, setChargeDesc] = useState("");
+  const [reqFeedbackDrafts, setReqFeedbackDrafts] = useState<
+    Record<string, { cost: string; deliveryDate: string; response: string }>
+  >({});
 
   useEffect(() => {
     if (activeTab === "metricas" || activeTab === "menu") {
@@ -953,6 +961,88 @@ export function CoachDashboard({
       "ELIMINACION",
       "Contabilidad (Débitos)",
       `Gasto eliminado: ${target?.concept ?? id} ($${target?.amount.toFixed(2) ?? "0.00"}).`
+    );
+  }
+
+  function handleAddSpecialCharge(e: FormEvent) {
+    e.preventDefault();
+    const amountNum = Number(chargeAmount);
+    if (!chargeTitle.trim() || !Number.isFinite(amountNum) || amountNum <= 0) {
+      return;
+    }
+    const newCharge: SpecialCharge = {
+      id: createRecordId("chg"),
+      title: chargeTitle.trim(),
+      description: chargeDesc.trim() || undefined,
+      amount: amountNum,
+      dueDate: chargeDueDate || undefined,
+      createdAt: new Date().toISOString(),
+      createdBy: currentUser?.username ?? "admin",
+    };
+    logAndCommit(
+      {
+        ...state,
+        specialCharges: [newCharge, ...(state.specialCharges ?? [])],
+      },
+      "CREACION",
+      "Contabilidad (Cobros Especiales)",
+      `Cobro extraordinario/torneo creado: "${newCharge.title}" ($${newCharge.amount.toFixed(2)}).`
+    );
+    setChargeTitle("");
+    setChargeAmount("");
+    setChargeDueDate("");
+    setChargeDesc("");
+  }
+
+  function handleDeleteSpecialCharge(id: string) {
+    const target = (state.specialCharges ?? []).find((c) => c.id === id);
+    logAndCommit(
+      {
+        ...state,
+        specialCharges: (state.specialCharges ?? []).filter((c) => c.id !== id),
+      },
+      "ELIMINACION",
+      "Contabilidad (Cobros Especiales)",
+      `Cobro extraordinario eliminado: "${target?.title ?? id}".`
+    );
+  }
+
+  function handleSaveRequestFeedback(requestId: string, nextStatus?: RequestStatus) {
+    const targetReq = state.materialRequests.find((r) => r.id === requestId);
+    if (!targetReq) return;
+    const draft = reqFeedbackDrafts[requestId];
+    const parsedCost =
+      draft && draft.cost.trim() !== ""
+        ? Number(draft.cost)
+        : targetReq.estimatedCost;
+    const deliveryDate =
+      draft && draft.deliveryDate.trim() !== ""
+        ? draft.deliveryDate
+        : targetReq.deliveryDate;
+    const coachResponse =
+      draft && draft.response.trim() !== ""
+        ? draft.response.trim()
+        : targetReq.coachResponse;
+
+    const updated = state.materialRequests.map((r) =>
+      r.id === requestId
+        ? {
+            ...r,
+            status: nextStatus ?? (r.status === "pendiente" ? "aprobado" : r.status),
+            estimatedCost:
+              parsedCost !== undefined && Number.isFinite(parsedCost)
+                ? parsedCost
+                : r.estimatedCost,
+            deliveryDate,
+            coachResponse,
+          }
+        : r
+    );
+    logAndCommit(
+      { ...state, materialRequests: updated },
+      "MODIFICACION",
+      "Solicitudes",
+      `Respuesta enviada a ${targetReq.athleteName} (${targetReq.itemType}): Costo $${parsedCost ?? 0}, entrega ${deliveryDate ?? "por definir"}.`
     );
   }
 
@@ -3202,10 +3292,133 @@ export function CoachDashboard({
                 </div>
               </div>
 
-              {/* Comprobantes de Pago Recibidos (Mensualidades) */}
+              {/* Cobros Extraordinarios / Torneos / Actividades para Atletas */}
+              <div className="grid gap-6 lg:grid-cols-2">
+                <form
+                  onSubmit={handleAddSpecialCharge}
+                  className="rounded-2xl border border-purple-500/30 bg-[#0D1322] p-5 space-y-3.5"
+                >
+                  <div>
+                    <h3 className="text-base font-bold text-white">
+                      {t("Crear Cobro de Torneo / Actividad Especial", "Create Tournament / Special Activity Fee")}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {t(
+                        "Los cobros creados aquí aparecerán automáticamente en el Método de Pago de los atletas.",
+                        "Fees created here will automatically appear in the athletes' Payment Method module."
+                      )}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Nombre del Torneo o Actividad *", "Tournament / Activity Name *")}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={chargeTitle}
+                        onChange={(e) => setChargeTitle(e.target.value)}
+                        placeholder="Ej. Inscripción Copa Nacional 2026"
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Monto ($) *", "Amount ($) *")}
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min={0.01}
+                        step="0.01"
+                        value={chargeAmount}
+                        onChange={(e) => setChargeAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Fecha límite (opcional)", "Due date (optional)")}
+                      </label>
+                      <input
+                        type="date"
+                        value={chargeDueDate}
+                        onChange={(e) => setChargeDueDate(e.target.value)}
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white [color-scheme:dark]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        {t("Descripción (opcional)", "Description (optional)")}
+                      </label>
+                      <input
+                        type="text"
+                        value={chargeDesc}
+                        onChange={(e) => setChargeDesc(e.target.value)}
+                        placeholder="Detalle de la actividad"
+                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl bg-[#7E3D97] py-2.5 text-xs font-extrabold text-white hover:bg-[#914BAE] cursor-pointer"
+                  >
+                    + {t("Publicar Cobro para Atletas", "Publish Fee for Athletes")}
+                  </button>
+                </form>
+
+                <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-3">
+                  <h3 className="text-base font-bold text-white">
+                    {t("Actividades / Torneos Activos", "Active Special Fees")} ({(state.specialCharges ?? []).length})
+                  </h3>
+                  {(state.specialCharges ?? []).length === 0 ? (
+                    <p className="py-8 text-center text-xs text-slate-400">
+                      {t("No hay cobros extraordinarios activos.", "No active special fees.")}
+                    </p>
+                  ) : (
+                    <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                      {(state.specialCharges ?? []).map((chg) => (
+                        <div
+                          key={chg.id}
+                          className="flex items-start justify-between gap-3 rounded-xl border border-purple-500/25 bg-[#070B14]/80 p-3 text-xs"
+                        >
+                          <div className="min-w-0 space-y-0.5">
+                            <p className="font-bold text-white">{chg.title}</p>
+                            {chg.description && <p className="text-[11px] text-slate-300">{chg.description}</p>}
+                            {chg.dueDate && (
+                              <p className="text-[10px] font-mono text-amber-300">
+                                {t("Fecha límite:", "Due:")} {chg.dueDate}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-mono text-sm font-extrabold text-purple-200">
+                              ${chg.amount.toFixed(2)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSpecialCharge(chg.id)}
+                              className="rounded-lg border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Comprobantes de Pago Recibidos */}
               <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-4">
                 <h3 className="text-base font-bold text-white">
-                  {t("Abonos de Atletas por Mensualidad", "Athlete Monthly Fee Payments")} ({state.payments.length})
+                  {t("Comprobantes de Pago de Atletas", "Athlete Payment Proofs")} ({state.payments.length})
                 </h3>
                 {state.payments.length === 0 ? (
                   <p className="py-8 text-center text-xs text-slate-400">
@@ -3225,6 +3438,11 @@ export function CoachDashboard({
                             <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-200">
                               {p.method.replace("_", " ")} · {p.monthKey}
                             </span>
+                            {p.paymentConceptLabel && (
+                              <span className="rounded-md bg-purple-500/20 border border-purple-400/30 px-2 py-0.5 text-[10px] font-bold text-purple-200">
+                                {p.paymentConceptLabel}
+                              </span>
+                            )}
                             <span
                               className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
                                 p.status === "aprobado"
@@ -3715,57 +3933,129 @@ export function CoachDashboard({
               {t("No hay solicitudes de materiales registradas.", "No material requests registered.")}
             </div>
           ) : (
-            <div className="space-y-3">
-              {state.materialRequests.map((req) => (
+            <div className="space-y-4">
+              {state.materialRequests.map((req) => {
+                const draft = reqFeedbackDrafts[req.id] ?? {
+                  cost: req.estimatedCost !== undefined ? String(req.estimatedCost) : "",
+                  deliveryDate: req.deliveryDate ?? "",
+                  response: req.coachResponse ?? "",
+                };
+                return (
                 <div
                   key={req.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#0D1322] p-5 text-xs"
+                  className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 text-xs space-y-4"
                 >
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-bold text-white">{req.athleteName}</span>
-                      <span className="font-mono text-amber-300">{req.athleteId}</span>
-                      <span className="rounded-md bg-[#7E3D97]/30 px-2 py-0.5 text-[10px] font-bold text-purple-200">
-                        {req.itemType} (x{req.quantity})
-                      </span>
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
-                          req.status === "entregado"
-                            ? "bg-emerald-500/20 text-emerald-300"
-                            : req.status === "aprobado"
-                            ? "bg-sky-500/20 text-sky-300"
-                            : "bg-amber-400/20 text-amber-300"
-                        }`}
-                      >
-                        {req.status}
-                      </span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-bold text-white">{req.athleteName}</span>
+                        <span className="font-mono text-amber-300">{req.athleteId}</span>
+                        <span className="rounded-md bg-[#7E3D97]/30 px-2 py-0.5 text-[10px] font-bold text-purple-200">
+                          {req.itemType} (x{req.quantity})
+                        </span>
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
+                            req.status === "entregado"
+                              ? "bg-emerald-500/20 text-emerald-300"
+                              : req.status === "aprobado"
+                              ? "bg-sky-500/20 text-sky-300"
+                              : "bg-amber-400/20 text-amber-300"
+                          }`}
+                        >
+                          {req.status}
+                        </span>
+                      </div>
+                      <p className="text-slate-200">{req.detail}</p>
+                      {req.notes && <p className="text-slate-400">{req.notes}</p>}
                     </div>
-                    <p className="text-slate-200">{req.detail}</p>
-                    {req.notes && <p className="text-slate-400">{req.notes}</p>}
+
+                    <div className="flex flex-wrap gap-2 shrink-0">
+                      {req.status === "pendiente" && (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateRequestStatus(req.id, "aprobado")}
+                          className="rounded-xl bg-sky-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-sky-400 cursor-pointer"
+                        >
+                          {t("Aprobar", "Approve")}
+                        </button>
+                      )}
+                      {req.status !== "entregado" && (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateRequestStatus(req.id, "entregado")}
+                          className="rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+                        >
+                          {t("Marcar Entregado", "Mark Delivered")}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 shrink-0">
-                    {req.status === "pendiente" && (
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateRequestStatus(req.id, "aprobado")}
-                        className="rounded-xl bg-sky-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-sky-400 cursor-pointer"
-                      >
-                        {t("Aprobar", "Approve")}
-                      </button>
-                    )}
-                    {req.status !== "entregado" && (
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateRequestStatus(req.id, "entregado")}
-                        className="rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
-                      >
-                        {t("Marcar Entregado", "Mark Delivered")}
-                      </button>
-                    )}
+                  {/* Feedback de costo y fecha de entrega para el atleta */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 rounded-xl border border-white/10 bg-[#070B14]/80 p-3.5 items-end">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-300 mb-1">
+                        {t("Costo del Material ($)", "Material Cost ($)")}
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={draft.cost}
+                        onChange={(e) =>
+                          setReqFeedbackDrafts((prev) => ({
+                            ...prev,
+                            [req.id]: { ...draft, cost: e.target.value },
+                          }))
+                        }
+                        placeholder="0.00"
+                        className="w-full rounded-lg border border-white/15 bg-[#0D1322] px-2.5 py-1.5 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-300 mb-1">
+                        {t("Fecha de Entrega", "Delivery Date")}
+                      </label>
+                      <input
+                        type="date"
+                        value={draft.deliveryDate}
+                        onChange={(e) =>
+                          setReqFeedbackDrafts((prev) => ({
+                            ...prev,
+                            [req.id]: { ...draft, deliveryDate: e.target.value },
+                          }))
+                        }
+                        className="w-full rounded-lg border border-white/15 bg-[#0D1322] px-2.5 py-1.5 text-xs text-white [color-scheme:dark]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-300 mb-1">
+                        {t("Respuesta al Atleta", "Feedback to Athlete")}
+                      </label>
+                      <input
+                        type="text"
+                        value={draft.response}
+                        onChange={(e) =>
+                          setReqFeedbackDrafts((prev) => ({
+                            ...prev,
+                            [req.id]: { ...draft, response: e.target.value },
+                          }))
+                        }
+                        placeholder="Ej. Disponible en sede tras pago"
+                        className="w-full rounded-lg border border-white/15 bg-[#0D1322] px-2.5 py-1.5 text-xs text-white"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveRequestFeedback(req.id)}
+                      className="rounded-lg bg-amber-400 px-3 py-2 text-xs font-extrabold text-slate-950 hover:bg-amber-300 cursor-pointer"
+                    >
+                      {t("Enviar Respuesta", "Send Feedback")}
+                    </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

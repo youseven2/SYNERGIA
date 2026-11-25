@@ -136,6 +136,10 @@ export interface AthletePayment {
   createdAt: string;
   reviewedAt?: string;
   reviewedBy?: string;
+  paymentConcept?: "mensualidad" | "solicitud_material" | "actividad_especial";
+  paymentConceptLabel?: string;
+  relatedRequestId?: string;
+  relatedChargeId?: string;
 }
 
 export interface PaymentNotification {
@@ -173,6 +177,19 @@ export interface MaterialRequest {
   notes: string;
   status: RequestStatus;
   createdAt: string;
+  estimatedCost?: number;
+  deliveryDate?: string;
+  coachResponse?: string;
+}
+
+export interface SpecialCharge {
+  id: string;
+  title: string;
+  description?: string;
+  amount: number;
+  dueDate?: string;
+  createdAt: string;
+  createdBy: string;
 }
 
 export interface SynergiaEvent {
@@ -269,6 +286,7 @@ export interface SynergiaState {
   auditLogs: AuditLogEntry[];
   specialCredits?: AccountingCreditEntry[];
   debitExpenses?: AccountingDebitEntry[];
+  specialCharges?: SpecialCharge[];
 }
 
 export const DEFAULT_EVENTS: SynergiaEvent[] = [
@@ -548,6 +566,9 @@ export function loadSynergiaState(): SynergiaState {
       debitExpenses: Array.isArray(parsed.debitExpenses)
         ? parsed.debitExpenses
         : [],
+      specialCharges: Array.isArray(parsed.specialCharges)
+        ? parsed.specialCharges
+        : [],
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
     return merged;
@@ -567,6 +588,7 @@ export function loadSynergiaState(): SynergiaState {
       auditLogs: [],
       specialCredits: [],
       debitExpenses: [],
+      specialCharges: [],
     };
   }
 }
@@ -695,4 +717,80 @@ export function syncScheduledPaymentReminders(
 export function saveSynergiaState(state: SynergiaState): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  fetch("/api/state", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ state }),
+  }).catch(() => {});
+}
+
+export async function syncSynergiaStateFromServer(): Promise<SynergiaState> {
+  const local = loadSynergiaState();
+  if (typeof window === "undefined") return local;
+  try {
+    const res = await fetch("/api/state", { cache: "no-store" });
+    if (!res.ok) return local;
+    const data = (await res.json()) as { state?: Partial<SynergiaState> | null };
+    if (!data?.state) {
+      // Seed server if empty and local has data
+      if (local.athletes.length > 0 || local.applications.length > 0) {
+        saveSynergiaState(local);
+      }
+      return local;
+    }
+    const serverState = data.state;
+    const merged: SynergiaState = {
+      ...local,
+      ...serverState,
+      forms:
+        Array.isArray(serverState.forms) && serverState.forms.length > 0
+          ? serverState.forms
+          : local.forms,
+      systemUsers: mergeSystemUsers(
+        Array.isArray(serverState.systemUsers)
+          ? serverState.systemUsers
+          : local.systemUsers
+      ),
+      athletes: Array.isArray(serverState.athletes)
+        ? serverState.athletes
+        : local.athletes,
+      applications: Array.isArray(serverState.applications)
+        ? serverState.applications
+        : local.applications,
+      payments: Array.isArray(serverState.payments)
+        ? serverState.payments
+        : local.payments,
+      paymentNotifications: Array.isArray(serverState.paymentNotifications)
+        ? serverState.paymentNotifications
+        : local.paymentNotifications,
+      materialRequests: Array.isArray(serverState.materialRequests)
+        ? serverState.materialRequests
+        : local.materialRequests,
+      events: Array.isArray(serverState.events)
+        ? serverState.events
+        : local.events,
+      eventNotifications: Array.isArray(serverState.eventNotifications)
+        ? serverState.eventNotifications
+        : local.eventNotifications,
+      attendanceRecords: Array.isArray(serverState.attendanceRecords)
+        ? serverState.attendanceRecords
+        : local.attendanceRecords,
+      auditLogs: Array.isArray(serverState.auditLogs)
+        ? serverState.auditLogs
+        : local.auditLogs,
+      specialCredits: Array.isArray(serverState.specialCredits)
+        ? serverState.specialCredits
+        : local.specialCredits ?? [],
+      debitExpenses: Array.isArray(serverState.debitExpenses)
+        ? serverState.debitExpenses
+        : local.debitExpenses ?? [],
+      specialCharges: Array.isArray(serverState.specialCharges)
+        ? serverState.specialCharges
+        : local.specialCharges ?? [],
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    return merged;
+  } catch {
+    return local;
+  }
 }
