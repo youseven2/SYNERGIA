@@ -232,6 +232,50 @@ export default function SistemaPage() {
     };
   }, [session, handleLogout, t]);
 
+  // Vinculación y sincronización en tiempo real entre módulos de Atleta y Entrenador
+  useEffect(() => {
+    if (session.type === "none") return;
+
+    const refreshFromServer = () => {
+      syncSynergiaStateFromServer()
+        .then((synced) => {
+          setState((prev) => {
+            if (prev && prev._updatedAt === synced._updatedAt) return prev;
+            return synced;
+          });
+        })
+        .catch(() => {});
+    };
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "synergia_cheer_state_v1" && e.newValue) {
+        try {
+          setState(loadSynergiaState());
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refreshFromServer();
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", refreshFromServer);
+    document.addEventListener("visibilitychange", handleVisibility);
+    const syncTimer = window.setInterval(refreshFromServer, 8000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", refreshFromServer);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.clearInterval(syncTimer);
+    };
+  }, [session.type]);
+
   async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoginError(null);

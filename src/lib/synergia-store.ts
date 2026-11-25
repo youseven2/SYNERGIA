@@ -287,6 +287,7 @@ export interface SynergiaState {
   specialCredits?: AccountingCreditEntry[];
   debitExpenses?: AccountingDebitEntry[];
   specialCharges?: SpecialCharge[];
+  _updatedAt?: number;
 }
 
 export const DEFAULT_EVENTS: SynergiaEvent[] = [
@@ -716,11 +717,12 @@ export function syncScheduledPaymentReminders(
 
 export function saveSynergiaState(state: SynergiaState): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const stamped: SynergiaState = { ...state, _updatedAt: Date.now() };
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stamped));
   fetch("/api/state", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ state }),
+    body: JSON.stringify({ state: stamped }),
   }).catch(() => {});
 }
 
@@ -732,16 +734,24 @@ export async function syncSynergiaStateFromServer(): Promise<SynergiaState> {
     if (!res.ok) return local;
     const data = (await res.json()) as { state?: Partial<SynergiaState> | null };
     if (!data?.state) {
-      // Seed server if empty and local has data
       if (local.athletes.length > 0 || local.applications.length > 0) {
         saveSynergiaState(local);
       }
       return local;
     }
     const serverState = data.state;
+    const localTime = local._updatedAt ?? 0;
+    const serverTime = typeof serverState._updatedAt === "number" ? serverState._updatedAt : 0;
+
+    if (localTime > serverTime && (local.athletes.length > 0 || local.materialRequests.length > 0 || local.payments.length > 0)) {
+      saveSynergiaState(local);
+      return local;
+    }
+
     const merged: SynergiaState = {
       ...local,
       ...serverState,
+      _updatedAt: serverTime || localTime,
       forms:
         Array.isArray(serverState.forms) && serverState.forms.length > 0
           ? serverState.forms

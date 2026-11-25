@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import {
   AthletePayment,
   AthleteProfile,
@@ -13,6 +13,7 @@ import {
   getAthletePaymentStatus,
   getCurrentMonthKey,
   saveSynergiaState,
+  syncSynergiaStateFromServer,
 } from "@/lib/synergia-store";
 import { generateAthleteProfilePdf } from "@/lib/pdf-report";
 import { AthleteCarnet } from "@/components/AthleteCarnet";
@@ -144,6 +145,17 @@ export function AthletePortal({
     saveSynergiaState(next);
     onStateChange(next);
   }
+
+  useEffect(() => {
+    syncSynergiaStateFromServer()
+      .then((synced) => {
+        if (synced._updatedAt !== state._updatedAt) {
+          onStateChange(synced);
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   function handleCashPhotoUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -808,8 +820,13 @@ export function AthletePortal({
       )}
 
       {athlete.profileCompleted && activeTab === "asistencia" && (() => {
-        const myAttendance = state.attendanceRecords.filter(
-          (r) => r.athleteId === athlete.athleteId
+        const myIds = new Set(
+          [athlete.athleteId, athlete.documentId, athlete.applicationId]
+            .filter(Boolean)
+            .map((v) => v.trim().toUpperCase())
+        );
+        const myAttendance = state.attendanceRecords.filter((r) =>
+          myIds.has((r.athleteId || "").trim().toUpperCase())
         );
         const qrCount = myAttendance.filter((r) => r.method === "qr").length;
         const manualCount = myAttendance.filter((r) => r.method === "manual").length;

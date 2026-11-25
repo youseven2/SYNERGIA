@@ -27,6 +27,7 @@ import {
   getCurrentMonthKey,
   saveSynergiaState,
   syncScheduledPaymentReminders,
+  syncSynergiaStateFromServer,
 } from "@/lib/synergia-store";
 import {
   generateAccountingLedgerPdf,
@@ -98,6 +99,14 @@ export function CoachDashboard({
     } catch {
       // ignore storage errors
     }
+    syncSynergiaStateFromServer()
+      .then((synced) => {
+        if (synced._updatedAt !== state._updatedAt) {
+          onStateChange(synced);
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   // Sincronización automática de recordatorios de pago los días 5, 10 y 15 de cada mes
