@@ -152,12 +152,12 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
               <div className="w-2/5 bg-[#7E3D97]" />
             </div>
 
-            <div className="flex flex-col items-center px-3 pt-2 pb-1.5 print:px-2 print:pt-1 print:pb-0.5 text-center border-b border-slate-200/70 bg-white/75 backdrop-blur-[1px]">
+            <div className="flex flex-col items-center px-3 pt-1.5 pb-1 print:px-2 print:pt-1 print:pb-0.5 text-center border-b border-slate-200/70 bg-white/75 backdrop-blur-[1px]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/synergia-logo.svg"
                 alt="SYNERGIA ALL STARS"
-                className="h-14 print:h-9 w-auto object-contain"
+                className="h-12 print:h-8 w-auto object-contain"
               />
               <span className="mt-0.5 rounded-full bg-[#7E3D97] px-2 py-[1px] text-[8px] print:text-[5.5px] font-bold uppercase tracking-[0.14em] text-white">
                 ATLETA OFICIAL
@@ -166,14 +166,14 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
           </div>
 
           {/* Foto y Datos Centrales con letras más grandes */}
-          <div className="relative z-10 flex flex-col items-center px-3.5 py-1.5 print:px-2 print:py-1 text-center space-y-1.5 print:space-y-1">
-            <div className="h-20 w-[68px] print:h-[14mm] print:w-[11.5mm] overflow-hidden rounded-xl border-2 border-[#00B7A4] bg-white shadow-sm flex items-center justify-center">
+          <div className="relative z-10 flex flex-col items-center px-3.5 py-1 print:px-2 print:py-0.5 text-center space-y-1 print:space-y-0.5">
+            <div className="h-28 w-[92px] print:h-[20mm] print:w-[16mm] overflow-hidden rounded-xl border-2 border-[#00B7A4] bg-white shadow-md flex items-center justify-center">
               {athlete.photoDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={athlete.photoDataUrl}
                   alt={athlete.fullName}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-cover object-top"
                 />
               ) : (
                 <span className="px-2 text-center text-[9px] font-semibold text-slate-500">
@@ -218,10 +218,10 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
           </div>
 
           {/* Código QR en la base */}
-          <div className="relative z-10 flex flex-col items-center justify-center border-t border-slate-200/70 bg-white/75 px-3 py-2 print:py-1">
+          <div className="relative z-10 flex flex-col items-center justify-center border-t border-slate-200/70 bg-white/75 px-3 py-1.5 print:py-0.5">
             {qrSvg && (
               <div
-                className="h-16 w-16 print:h-12 print:w-12 rounded-lg border border-slate-300 bg-white p-1 flex items-center justify-center [&>svg]:h-full [&>svg]:w-full"
+                className="h-14 w-14 print:h-[11mm] print:w-[11mm] rounded-lg border border-slate-300 bg-white p-1 flex items-center justify-center [&>svg]:h-full [&>svg]:w-full"
                 dangerouslySetInnerHTML={{ __html: qrSvg }}
               />
             )}
