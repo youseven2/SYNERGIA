@@ -1864,56 +1864,55 @@ export function CoachDashboard({
                 </p>
               </div>
             </button>
+          </div>
 
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             {/* 11. GESTIÓN DE USUARIOS ADMINISTRADORES Y ENTRENADORES */}
             <button
               type="button"
               onClick={() => setActiveTab("usuarios")}
-              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-amber-400/40 bg-gradient-to-r from-[#381B4C] via-[#0B1528] to-[#065F46] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-amber-300 cursor-pointer"
+              className="group flex items-center justify-between gap-2.5 overflow-hidden rounded-xl border border-amber-400/40 bg-gradient-to-r from-[#381B4C] via-[#0B1528] to-[#065F46] px-3.5 py-2.5 sm:px-4 sm:py-3 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-amber-300 cursor-pointer"
             >
-              <div className="flex items-start justify-between">
-                <svg className="h-9 w-9 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <svg className="h-6 w-6 shrink-0 text-white/95" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
                 </svg>
-                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-amber-200">
-                  {state.systemUsers.length} {t("Admin / Entrenadores", "Admins / Coaches")} · {state.athletes.length} {t("Estándar", "Standard")}
-                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-xs sm:text-sm font-extrabold text-white">
+                    {t("Usuarios Admin y Entrenadores", "Admin & Coach Users")}
+                  </p>
+                  <p className="hidden sm:block truncate text-[11px] text-slate-200/80">
+                    {t("Cuentas con acceso a configuración y módulos", "Accounts with access to settings & modules")}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-base sm:text-lg font-extrabold text-white">
-                  {t("Usuarios Administradores y Entrenadores", "Administrator & Coach Users")}
-                </p>
-                <p className="text-[11px] text-slate-200/85">
-                  {t("Crear cuentas con acceso total a configuración, contabilidad y eventos", "Create accounts with full access to settings, accounting & events")}
-                </p>
-              </div>
+              <span className="shrink-0 rounded-lg bg-black/30 px-2 py-0.5 text-[11px] font-extrabold text-amber-200">
+                {state.systemUsers.length} · {state.athletes.length}
+              </span>
             </button>
 
             {/* 12. AUDITORÍA Y LOGS DEL SISTEMA */}
             <button
               type="button"
               onClick={() => setActiveTab("auditoria")}
-              className="col-span-2 md:col-span-4 group relative flex flex-col justify-between overflow-hidden rounded-xl border border-cyan-400/35 bg-gradient-to-r from-[#0B172A] via-[#131B2E] to-[#1E1B4B] p-4 sm:p-5 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-cyan-300 cursor-pointer"
+              className="group flex items-center justify-between gap-2.5 overflow-hidden rounded-xl border border-cyan-400/35 bg-gradient-to-r from-[#0B172A] via-[#131B2E] to-[#1E1B4B] px-3.5 py-2.5 sm:px-4 sm:py-3 text-left shadow-lg transition-all duration-200 hover:scale-[1.01] hover:border-cyan-300 cursor-pointer"
             >
-              <div className="flex items-start justify-between">
-                <svg className="h-9 w-9 text-cyan-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <svg className="h-6 w-6 shrink-0 text-cyan-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
                 </svg>
-                <span className="rounded-lg bg-black/30 px-3 py-1 text-xs font-extrabold text-cyan-200">
-                  {(state.auditLogs ?? []).length} {t("Registros", "Records")}
-                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-xs sm:text-sm font-extrabold text-white">
+                    {t("Auditoría y Logs", "Audit & Logs")}
+                  </p>
+                  <p className="hidden sm:block truncate text-[11px] text-slate-200/80">
+                    {t("Historial de acciones por usuario", "User action history")}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-base sm:text-lg font-extrabold text-white">
-                  {t("Auditoría y Logs del Sistema", "System Audit & Logs")}
-                </p>
-                <p className="text-[11px] text-slate-200/85">
-                  {t(
-                    "Historial con fecha y hora de ingresos, modificaciones y eliminaciones por usuario",
-                    "Date & time history of logins, modifications and deletions by user"
-                  )}
-                </p>
-              </div>
+              <span className="shrink-0 rounded-lg bg-black/30 px-2 py-0.5 text-[11px] font-extrabold text-cyan-200">
+                {(state.auditLogs ?? []).length}
+              </span>
             </button>
           </div>
         </section>
