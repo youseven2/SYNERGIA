@@ -244,6 +244,14 @@ export function CoachDashboard({
   const [specialChargeModalOpen, setSpecialChargeModalOpen] = useState(false);
   const [pendingPaymentsModalOpen, setPendingPaymentsModalOpen] = useState(false);
   const [selectedPendingPaymentId, setSelectedPendingPaymentId] = useState<string | null>(null);
+  const [activeChargesModalOpen, setActiveChargesModalOpen] = useState(false);
+  const [paymentProofsModalOpen, setPaymentProofsModalOpen] = useState(false);
+  const [paymentProofSearch, setPaymentProofSearch] = useState("");
+  const [paymentProofStatusFilter, setPaymentProofStatusFilter] = useState<
+    "TODOS" | "pendiente" | "aprobado" | "rechazado"
+  >("TODOS");
+  const [athleteNameSearch, setAthleteNameSearch] = useState("");
+  const [athleteAgeFilter, setAthleteAgeFilter] = useState("");
   const [reqFeedbackDrafts, setReqFeedbackDrafts] = useState<
     Record<string, { cost: string; deliveryDate: string; response: string }>
   >({});
@@ -2712,12 +2720,20 @@ export function CoachDashboard({
 
       {/* TAB 4: PERFIL DEL ATLETA Y REPORTES POR GRUPO */}
       {activeTab === "perfil" && (() => {
-        const filteredAthletes =
-          athleteCategoryFilter === "TODAS"
-            ? state.athletes
-            : state.athletes.filter(
-                (a) => a.category === athleteCategoryFilter
-              );
+        const filteredAthletes = state.athletes.filter((a) => {
+          const matchCat =
+            athleteCategoryFilter === "TODAS" ||
+            a.category === athleteCategoryFilter;
+          const q = athleteNameSearch.trim().toLowerCase();
+          const matchName =
+            !q ||
+            a.fullName.toLowerCase().includes(q) ||
+            a.athleteId.toLowerCase().includes(q) ||
+            (a.documentId || "").toLowerCase().includes(q);
+          const ageTrim = athleteAgeFilter.trim();
+          const matchAge = !ageTrim || String(a.age) === ageTrim;
+          return matchCat && matchName && matchAge;
+        });
         const categoryLabel =
           athleteCategoryFilter === "TODAS"
             ? t("Todos los grupos", "All groups")
@@ -2782,7 +2798,24 @@ export function CoachDashboard({
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5">
+              <input
+                type="text"
+                value={athleteNameSearch}
+                onChange={(e) => setAthleteNameSearch(e.target.value)}
+                placeholder={t("Buscar por nombre o ID...", "Search by name or ID...")}
+                className="rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 focus:border-[#00B7A4] focus:outline-none"
+              />
+              <input
+                type="number"
+                min={1}
+                max={99}
+                value={athleteAgeFilter}
+                onChange={(e) => setAthleteAgeFilter(e.target.value)}
+                placeholder={t("Edad", "Age")}
+                aria-label={t("Filtrar por edad", "Filter by age")}
+                className="w-full sm:w-20 rounded-xl border border-white/15 bg-[#070B14] px-3 py-2.5 text-xs text-white placeholder:text-slate-500 focus:border-[#00B7A4] focus:outline-none"
+              />
               <select
                 aria-label={t("Filtrar por grupo", "Filter by group")}
                 value={athleteCategoryFilter}
@@ -3062,6 +3095,20 @@ export function CoachDashboard({
               >
                 📄 {t("Reporte Libro PDF (Conciliación)", "Ledger PDF Report (Reconciliation)")}
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveChargesModalOpen(true)}
+                className="rounded-xl border border-purple-400/45 bg-[#7E3D97]/30 px-3.5 py-2 text-xs font-extrabold text-purple-100 hover:bg-[#7E3D97]/50 cursor-pointer"
+              >
+                🏆 {t("Actividades / Torneos Activos", "Active Special Fees")} ({(state.specialCharges ?? []).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentProofsModalOpen(true)}
+                className="rounded-xl border border-emerald-400/45 bg-emerald-500/20 px-3.5 py-2 text-xs font-extrabold text-emerald-200 hover:bg-emerald-500/30 cursor-pointer"
+              >
+                🧾 {t("Comprobantes de Pago de Atletas", "Athlete Payment Proofs")} ({state.payments.length})
+              </button>
             </div>
           </div>
 
@@ -3309,152 +3356,6 @@ export function CoachDashboard({
                 </div>
               </div>
 
-              {/* Cobros Extraordinarios / Torneos / Actividades para Atletas */}
-              <div className="rounded-2xl border border-purple-500/30 bg-[#0D1322] p-5 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-base font-bold text-white">
-                      {t("Actividades / Torneos Activos", "Active Special Fees")} ({(state.specialCharges ?? []).length})
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {t(
-                        "Los cobros creados aquí aparecerán automáticamente en el Método de Pago de los atletas.",
-                        "Fees created here will automatically appear in the athletes' Payment Method module."
-                      )}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSpecialChargeModalOpen(true)}
-                    className="shrink-0 rounded-xl bg-[#7E3D97] px-4 py-2.5 text-xs font-extrabold text-white shadow-lg shadow-[#7E3D97]/25 hover:bg-[#914BAE] transition-colors cursor-pointer"
-                  >
-                    + {t("Crear Cobro de Torneo / Actividad Especial", "Create Tournament / Special Activity Fee")}
-                  </button>
-                </div>
-
-                {(state.specialCharges ?? []).length === 0 ? (
-                  <p className="py-6 text-center text-xs text-slate-400">
-                    {t("No hay cobros extraordinarios activos.", "No active special fees.")}
-                  </p>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2 max-h-60 overflow-y-auto pr-1">
-                    {(state.specialCharges ?? []).map((chg) => (
-                      <div
-                        key={chg.id}
-                        className="flex items-start justify-between gap-3 rounded-xl border border-purple-500/25 bg-[#070B14]/80 p-3 text-xs"
-                      >
-                        <div className="min-w-0 space-y-0.5">
-                          <p className="font-bold text-white">{chg.title}</p>
-                          {chg.description && <p className="text-[11px] text-slate-300">{chg.description}</p>}
-                          {chg.dueDate && (
-                            <p className="text-[10px] font-mono text-amber-300">
-                              {t("Fecha límite:", "Due:")} {chg.dueDate}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="font-mono text-sm font-extrabold text-purple-200">
-                            ${chg.amount.toFixed(2)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteSpecialCharge(chg.id)}
-                            className="rounded-lg border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Comprobantes de Pago Recibidos */}
-              <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-4">
-                <h3 className="text-base font-bold text-white">
-                  {t("Comprobantes de Pago de Atletas", "Athlete Payment Proofs")} ({state.payments.length})
-                </h3>
-                {state.payments.length === 0 ? (
-                  <p className="py-8 text-center text-xs text-slate-400">
-                    {t("No hay pagos registrados por atletas todavía.", "No athlete payments registered yet.")}
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {state.payments.map((p) => (
-                      <div
-                        key={p.id}
-                        className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#070B14]/80 p-4 text-xs"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-bold text-white">{p.athleteName}</span>
-                            <span className="font-mono text-amber-300">{p.athleteId}</span>
-                            <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-200">
-                              {p.method.replace("_", " ")} · {p.monthKey}
-                            </span>
-                            {p.paymentConceptLabel && (
-                              <span className="rounded-md bg-purple-500/20 border border-purple-400/30 px-2 py-0.5 text-[10px] font-bold text-purple-200">
-                                {p.paymentConceptLabel}
-                              </span>
-                            )}
-                            <span
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
-                                p.status === "aprobado"
-                                  ? "bg-emerald-500/20 text-emerald-300"
-                                  : p.status === "rechazado"
-                                  ? "bg-rose-500/20 text-rose-300"
-                                  : "bg-amber-400/20 text-amber-300"
-                              }`}
-                            >
-                              {p.status}
-                            </span>
-                          </div>
-                          <p className="text-emerald-300 font-extrabold text-sm">
-                            ${p.amount.toFixed(2)}
-                          </p>
-                          {p.bank && (
-                            <p className="text-slate-300">
-                              Banco: {p.bank} · Ref: <span className="font-mono">{p.reference}</span> · Cédula: {p.documentId}
-                              {p.phone ? ` · Tel: ${p.phone}` : ""}
-                            </p>
-                          )}
-                          {p.cashPhotoDataUrl && (
-                            <div className="pt-1">
-                              <p className="text-[11px] text-amber-300 mb-1">Foto de efectivo adjunta:</p>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={p.cashPhotoDataUrl}
-                                alt={`Efectivo ${p.athleteName}`}
-                                className="h-24 w-auto rounded-lg border border-white/15 object-cover"
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        {p.status === "pendiente" && (
-                          <div className="flex flex-wrap gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleReviewPayment(p.id, "aprobado")}
-                              className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
-                            >
-                              {t("Aprobar y Descontar", "Approve & Deduct")}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleReviewPayment(p.id, "rechazado")}
-                              className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
-                            >
-                              {t("Rechazar", "Reject")}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
           ) : (
             /* SUB-MÓDULO 2: DÉBITOS Y GASTOS DE LA ESCUELA */
@@ -5448,6 +5349,251 @@ export function CoachDashboard({
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+      {/* MODAL: Actividades / Torneos Activos */}
+      {activeChargesModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => setActiveChargesModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-3xl border border-purple-500/40 bg-[#0D1322] p-6 space-y-5 shadow-2xl"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-4">
+              <div>
+                <h3 className="text-lg font-extrabold text-white">
+                  🏆 {t("Actividades / Torneos Activos", "Active Special Fees")} ({(state.specialCharges ?? []).length})
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {t(
+                    "Los cobros creados aquí aparecen automáticamente en el Método de Pago de los atletas.",
+                    "Fees created here automatically appear in the athletes' Payment Method module."
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveChargesModalOpen(false);
+                    setSpecialChargeModalOpen(true);
+                  }}
+                  className="rounded-xl bg-[#7E3D97] px-3.5 py-2 text-xs font-extrabold text-white hover:bg-[#914BAE] cursor-pointer"
+                >
+                  + {t("Crear Cobro", "Create Fee")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveChargesModalOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs text-white hover:bg-white/20 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {(state.specialCharges ?? []).length === 0 ? (
+              <p className="py-10 text-center text-xs text-slate-400">
+                {t("No hay cobros extraordinarios activos.", "No active special fees.")}
+              </p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 max-h-[58vh] overflow-y-auto pr-1">
+                {(state.specialCharges ?? []).map((chg) => (
+                  <div
+                    key={chg.id}
+                    className="flex items-start justify-between gap-3 rounded-xl border border-purple-500/25 bg-[#070B14]/85 p-3.5 text-xs"
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="font-bold text-white">{chg.title}</p>
+                      {chg.description && (
+                        <p className="text-[11px] text-slate-300">{chg.description}</p>
+                      )}
+                      {chg.dueDate && (
+                        <p className="text-[10px] font-mono text-amber-300">
+                          {t("Fecha límite:", "Due:")} {chg.dueDate}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-mono text-sm font-extrabold text-purple-200">
+                        ${chg.amount.toFixed(2)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSpecialCharge(chg.id)}
+                        className="rounded-lg border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Comprobantes de Pago de Atletas (con buscador y filtro de estado) */}
+      {paymentProofsModalOpen && (() => {
+        const filteredProofs = state.payments.filter((p) => {
+          const matchesStatus =
+            paymentProofStatusFilter === "TODOS" || p.status === paymentProofStatusFilter;
+          const q = paymentProofSearch.trim().toLowerCase();
+          const matchesSearch =
+            !q ||
+            p.athleteName.toLowerCase().includes(q) ||
+            p.athleteId.toLowerCase().includes(q) ||
+            (p.reference || "").toLowerCase().includes(q) ||
+            (p.bank || "").toLowerCase().includes(q) ||
+            (p.paymentConceptLabel || "").toLowerCase().includes(q);
+          return matchesStatus && matchesSearch;
+        });
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            onClick={() => setPaymentProofsModalOpen(false)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-4xl max-h-[88vh] overflow-y-auto rounded-3xl border border-emerald-400/40 bg-[#0D1322] p-6 space-y-5 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-4">
+                <div>
+                  <h3 className="text-lg font-extrabold text-white">
+                    🧾 {t("Comprobantes de Pago de Atletas", "Athlete Payment Proofs")} ({filteredProofs.length} / {state.payments.length})
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {t(
+                      "Busca por nombre, ID, referencia, banco o concepto y aprueba o rechaza comprobantes.",
+                      "Search by name, ID, reference, bank or concept and approve or reject proofs."
+                    )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPaymentProofsModalOpen(false)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs text-white hover:bg-white/20 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input
+                  type="text"
+                  autoFocus
+                  value={paymentProofSearch}
+                  onChange={(e) => setPaymentProofSearch(e.target.value)}
+                  placeholder={t(
+                    "Buscar atleta, ID, referencia, banco...",
+                    "Search athlete, ID, reference, bank..."
+                  )}
+                  className="sm:col-span-2 rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                />
+                <select
+                  value={paymentProofStatusFilter}
+                  onChange={(e) =>
+                    setPaymentProofStatusFilter(
+                      e.target.value as "TODOS" | "pendiente" | "aprobado" | "rechazado"
+                    )
+                  }
+                  className="rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-xs text-white focus:border-emerald-400 focus:outline-none"
+                >
+                  <option value="TODOS">{t("Todos los estados", "All statuses")}</option>
+                  <option value="pendiente">{t("Pendientes", "Pending")}</option>
+                  <option value="aprobado">{t("Aprobados", "Approved")}</option>
+                  <option value="rechazado">{t("Rechazados", "Rejected")}</option>
+                </select>
+              </div>
+
+              {filteredProofs.length === 0 ? (
+                <p className="py-10 text-center text-xs text-slate-400">
+                  {t(
+                    "No se encontraron comprobantes con este filtro.",
+                    "No payment proofs match this filter."
+                  )}
+                </p>
+              ) : (
+                <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
+                  {filteredProofs.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#070B14]/85 p-4 text-xs"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-bold text-white">{p.athleteName}</span>
+                          <span className="font-mono text-amber-300">{p.athleteId}</span>
+                          <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-200">
+                            {p.method.replace("_", " ")} · {p.monthKey}
+                          </span>
+                          {p.paymentConceptLabel && (
+                            <span className="rounded-md bg-purple-500/20 border border-purple-400/30 px-2 py-0.5 text-[10px] font-bold text-purple-200">
+                              {p.paymentConceptLabel}
+                            </span>
+                          )}
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
+                              p.status === "aprobado"
+                                ? "bg-emerald-500/20 text-emerald-300"
+                                : p.status === "rechazado"
+                                ? "bg-rose-500/20 text-rose-300"
+                                : "bg-amber-400/20 text-amber-300"
+                            }`}
+                          >
+                            {p.status}
+                          </span>
+                        </div>
+                        <p className="text-emerald-300 font-extrabold text-sm">
+                          ${p.amount.toFixed(2)}
+                        </p>
+                        {p.bank && (
+                          <p className="text-slate-300">
+                            Banco: {p.bank} · Ref: <span className="font-mono">{p.reference}</span> · Cédula: {p.documentId}
+                            {p.phone ? ` · Tel: ${p.phone}` : ""}
+                          </p>
+                        )}
+                        {p.cashPhotoDataUrl && (
+                          <div className="pt-1">
+                            <p className="text-[11px] text-amber-300 mb-1">Foto de efectivo adjunta:</p>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={p.cashPhotoDataUrl}
+                              alt={`Efectivo ${p.athleteName}`}
+                              className="h-24 w-auto rounded-lg border border-white/15 object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {p.status === "pendiente" && (
+                        <div className="flex flex-wrap gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleReviewPayment(p.id, "aprobado")}
+                            className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+                          >
+                            {t("Aprobar y Descontar", "Approve & Deduct")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReviewPayment(p.id, "rechazado")}
+                            className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                          >
+                            {t("Rechazar", "Reject")}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
