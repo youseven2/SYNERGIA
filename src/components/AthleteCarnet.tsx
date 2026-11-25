@@ -157,9 +157,9 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
               <img
                 src="/synergia-logo.svg"
                 alt="SYNERGIA ALL STARS"
-                className="h-12 print:h-8 w-auto object-contain"
+                className="h-16 print:h-11 w-auto object-contain"
               />
-              <span className="mt-0.5 rounded-full bg-[#7E3D97] px-2 py-[1px] text-[8px] print:text-[5.5px] font-bold uppercase tracking-[0.14em] text-white">
+              <span className="mt-0.5 rounded-full bg-[#7E3D97] px-2 py-[1px] text-[7.5px] print:text-[5px] font-bold uppercase tracking-[0.14em] text-white">
                 ATLETA OFICIAL
               </span>
             </div>
@@ -167,7 +167,7 @@ export function AthleteCarnet({ athlete }: { athlete: AthleteProfile }) {
 
           {/* Foto y Datos Centrales con letras más grandes */}
           <div className="relative z-10 flex flex-col items-center px-3.5 py-1 print:px-2 print:py-0.5 text-center space-y-1 print:space-y-0.5">
-            <div className="h-28 w-[92px] print:h-[20mm] print:w-[16mm] overflow-hidden rounded-xl border-2 border-[#00B7A4] bg-white shadow-md flex items-center justify-center">
+            <div className="h-24 w-[80px] print:h-[16.5mm] print:w-[13.5mm] overflow-hidden rounded-xl border-2 border-[#00B7A4] bg-white shadow-md flex items-center justify-center">
               {athlete.photoDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img

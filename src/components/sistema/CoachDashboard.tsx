@@ -242,6 +242,8 @@ export function CoachDashboard({
   const [chargeDueDate, setChargeDueDate] = useState("");
   const [chargeDesc, setChargeDesc] = useState("");
   const [specialChargeModalOpen, setSpecialChargeModalOpen] = useState(false);
+  const [pendingPaymentsModalOpen, setPendingPaymentsModalOpen] = useState(false);
+  const [selectedPendingPaymentId, setSelectedPendingPaymentId] = useState<string | null>(null);
   const [reqFeedbackDrafts, setReqFeedbackDrafts] = useState<
     Record<string, { cost: string; deliveryDate: string; response: string }>
   >({});
@@ -1548,13 +1550,17 @@ export function CoachDashboard({
           {pendingPaymentsCount > 0 && (
             <button
               type="button"
-              onClick={() => setActiveTab("contabilidad")}
-              className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-3.5 py-2 text-xs font-bold text-emerald-200 cursor-pointer"
+              onClick={() => {
+                const firstPending = state.payments.find((p) => p.status === "pendiente");
+                setSelectedPendingPaymentId(firstPending?.id ?? null);
+                setPendingPaymentsModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl border-2 border-emerald-400 bg-gradient-to-r from-emerald-500/30 to-amber-400/25 px-4 py-2 text-xs font-extrabold text-white shadow-lg shadow-emerald-500/25 animate-pulse hover:scale-[1.02] transition-transform cursor-pointer"
             >
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              {t(
-                `${pendingPaymentsCount} pago(s) por verificar`,
-                `${pendingPaymentsCount} payment(s) to verify`
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+              🔔 {t(
+                `¡Pago por Confirmar! (${pendingPaymentsCount})`,
+                `Payment to Confirm! (${pendingPaymentsCount})`
               )}
             </button>
           )}
@@ -5264,6 +5270,190 @@ export function CoachDashboard({
           </form>
         </div>
       )}
+      {/* MODAL: Pagos Pendientes por Confirmar */}
+      {pendingPaymentsModalOpen && (() => {
+        const pendingList = state.payments.filter((p) => p.status === "pendiente");
+        const activePending =
+          pendingList.find((p) => p.id === selectedPendingPaymentId) ??
+          pendingList[0] ??
+          null;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            onClick={() => setPendingPaymentsModalOpen(false)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-3xl border border-emerald-400/40 bg-[#0D1322] p-6 space-y-5 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-4">
+                <div>
+                  <span className="inline-block rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300">
+                    {t("Verificación Rápida de Pagos", "Quick Payment Verification")}
+                  </span>
+                  <h3 className="mt-1 text-lg font-extrabold text-white">
+                    {t("Pagos Pendientes por Aprobar", "Pending Payments to Approve")} ({pendingList.length})
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPendingPaymentsModalOpen(false)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs text-white hover:bg-white/20 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {pendingList.length === 0 ? (
+                <div className="py-10 text-center space-y-3">
+                  <p className="text-sm font-bold text-emerald-300">
+                    {t("Todos los pagos han sido verificados.", "All payments have been verified.")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setPendingPaymentsModalOpen(false)}
+                    className="rounded-xl bg-emerald-500 px-5 py-2 text-xs font-bold text-slate-950 cursor-pointer"
+                  >
+                    {t("Cerrar", "Close")}
+                  </button>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-5">
+                  {/* Lista de pagos pendientes */}
+                  <div className="md:col-span-2 space-y-2 max-h-[55vh] overflow-y-auto pr-1">
+                    {pendingList.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setSelectedPendingPaymentId(p.id)}
+                        className={`w-full text-left rounded-xl border p-3 text-xs transition-all cursor-pointer ${
+                          activePending?.id === p.id
+                            ? "border-emerald-400 bg-emerald-500/15"
+                            : "border-white/10 bg-[#070B14]/80 hover:border-white/25"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-white truncate">{p.athleteName}</span>
+                          <span className="font-mono font-extrabold text-emerald-300">
+                            ${p.amount.toFixed(2)}
+                          </span>
+                        </div>
+                        <p className="font-mono text-[10px] text-amber-300 mt-0.5">
+                          {p.athleteId} · {p.method.replace("_", " ")}
+                        </p>
+                        {p.paymentConceptLabel && (
+                          <p className="text-[10px] text-purple-200 truncate mt-0.5">
+                            {p.paymentConceptLabel}
+                          </p>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Detalle y botones Aprobar / Rechazar */}
+                  {activePending && (
+                    <div className="md:col-span-3 rounded-2xl border border-white/10 bg-[#070B14]/85 p-5 space-y-4 text-xs">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-base font-extrabold text-white">{activePending.athleteName}</p>
+                          <p className="font-mono text-amber-300">{activePending.athleteId}</p>
+                        </div>
+                        <span className="font-mono text-xl font-black text-emerald-400">
+                          ${activePending.amount.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5 rounded-xl border border-white/10 bg-[#0D1322] p-3">
+                        <div>
+                          <span className="block text-[10px] text-slate-400">{t("Concepto", "Concept")}</span>
+                          <span className="font-bold text-purple-200">
+                            {activePending.paymentConceptLabel || `Mensualidad ${activePending.monthKey}`}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] text-slate-400">{t("Método / Mes", "Method / Month")}</span>
+                          <span className="font-bold text-white uppercase">
+                            {activePending.method.replace("_", " ")} · {activePending.monthKey}
+                          </span>
+                        </div>
+                        {activePending.bank && (
+                          <div>
+                            <span className="block text-[10px] text-slate-400">{t("Banco", "Bank")}</span>
+                            <span className="font-semibold text-white">{activePending.bank}</span>
+                          </div>
+                        )}
+                        {activePending.reference && (
+                          <div>
+                            <span className="block text-[10px] text-slate-400">{t("Referencia", "Reference")}</span>
+                            <span className="font-mono font-bold text-emerald-300">{activePending.reference}</span>
+                          </div>
+                        )}
+                        {activePending.documentId && (
+                          <div>
+                            <span className="block text-[10px] text-slate-400">{t("Cédula", "ID")}</span>
+                            <span className="font-semibold text-white">{activePending.documentId}</span>
+                          </div>
+                        )}
+                        {activePending.phone && (
+                          <div>
+                            <span className="block text-[10px] text-slate-400">{t("Teléfono", "Phone")}</span>
+                            <span className="font-semibold text-white">{activePending.phone}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {activePending.notes && (
+                        <p className="text-slate-300">
+                          <strong className="text-slate-400">{t("Notas:", "Notes:")}</strong> {activePending.notes}
+                        </p>
+                      )}
+
+                      {activePending.cashPhotoDataUrl && (
+                        <div>
+                          <p className="text-[11px] font-semibold text-amber-300 mb-1">
+                            {t("Comprobante / Foto de Efectivo:", "Cash Photo Proof:")}
+                          </p>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={activePending.cashPhotoDataUrl}
+                            alt={activePending.athleteName}
+                            className="max-h-40 w-auto rounded-xl border border-white/15 object-contain"
+                          />
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2.5 pt-2 border-t border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleReviewPayment(activePending.id, "aprobado");
+                            const nextItem = pendingList.find((x) => x.id !== activePending.id);
+                            setSelectedPendingPaymentId(nextItem?.id ?? null);
+                          }}
+                          className="flex-1 rounded-xl bg-emerald-500 py-2.5 px-4 text-xs font-extrabold text-slate-950 hover:bg-emerald-400 cursor-pointer"
+                        >
+                          ✓ {t("Aprobar y Descontar", "Approve & Deduct")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleReviewPayment(activePending.id, "rechazado");
+                            const nextItem = pendingList.find((x) => x.id !== activePending.id);
+                            setSelectedPendingPaymentId(nextItem?.id ?? null);
+                          }}
+                          className="flex-1 rounded-xl border border-rose-500/45 bg-rose-500/15 py-2.5 px-4 text-xs font-extrabold text-rose-200 hover:bg-rose-500/25 cursor-pointer"
+                        >
+                          ✕ {t("Rechazar Pago", "Reject Payment")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
