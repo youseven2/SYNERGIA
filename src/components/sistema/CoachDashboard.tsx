@@ -223,6 +223,7 @@ export function CoachDashboard({
   const [deleteAuthError, setDeleteAuthError] = useState<string | null>(null);
   const [auditSearch, setAuditSearch] = useState("");
   const [auditActionFilter, setAuditActionFilter] = useState<AuditActionType | "TODOS">("TODOS");
+  const [confirmClearLogs, setConfirmClearLogs] = useState(false);
   const [accountingView, setAccountingView] = useState<"creditos" | "debitos">("creditos");
   const [creditDate, setCreditDate] = useState("");
   const [creditSource, setCreditSource] = useState("Patrocinio / Aporte");
@@ -289,6 +290,14 @@ export function CoachDashboard({
       detail,
     });
     commitState(logged);
+  }
+
+  function handleClearAuditLogs() {
+    commitState({
+      ...state,
+      auditLogs: [],
+    });
+    setConfirmClearLogs(false);
   }
 
   // --- INSCRIPCION ACTIONS ---
@@ -4748,9 +4757,38 @@ export function CoachDashboard({
                   )}
                 </p>
               </div>
-              <span className="self-start rounded-xl bg-cyan-500/15 border border-cyan-400/30 px-3 py-1.5 text-xs font-bold text-cyan-200">
-                {filteredLogs.length} / {allLogs.length} {t("eventos", "events")}
-              </span>
+              <div className="flex flex-wrap items-center gap-2 self-start">
+                <span className="rounded-xl bg-cyan-500/15 border border-cyan-400/30 px-3 py-1.5 text-xs font-bold text-cyan-200">
+                  {filteredLogs.length} / {allLogs.length} {t("eventos", "events")}
+                </span>
+                {allLogs.length > 0 && !confirmClearLogs && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmClearLogs(true)}
+                    className="rounded-xl border border-rose-500/40 bg-rose-500/15 px-3 py-1.5 text-xs font-bold text-rose-200 transition hover:bg-rose-500/25"
+                  >
+                    {t("Vaciar logs", "Clear logs")}
+                  </button>
+                )}
+                {allLogs.length > 0 && confirmClearLogs && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleClearAuditLogs}
+                      className="rounded-xl border border-rose-500/60 bg-rose-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-rose-500"
+                    >
+                      {t("Confirmar vaciado", "Confirm clear")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmClearLogs(false)}
+                      className="rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/10"
+                    >
+                      {t("Cancelar", "Cancel")}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
