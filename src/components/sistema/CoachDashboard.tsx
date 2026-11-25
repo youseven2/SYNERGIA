@@ -241,6 +241,7 @@ export function CoachDashboard({
   const [chargeAmount, setChargeAmount] = useState("");
   const [chargeDueDate, setChargeDueDate] = useState("");
   const [chargeDesc, setChargeDesc] = useState("");
+  const [specialChargeModalOpen, setSpecialChargeModalOpen] = useState(false);
   const [reqFeedbackDrafts, setReqFeedbackDrafts] = useState<
     Record<string, { cost: string; deliveryDate: string; response: string }>
   >({});
@@ -1001,6 +1002,7 @@ export function CoachDashboard({
     setChargeAmount("");
     setChargeDueDate("");
     setChargeDesc("");
+    setSpecialChargeModalOpen(false);
   }
 
   function handleDeleteSpecialCharge(id: string) {
@@ -3302,14 +3304,11 @@ export function CoachDashboard({
               </div>
 
               {/* Cobros Extraordinarios / Torneos / Actividades para Atletas */}
-              <div className="grid gap-6 lg:grid-cols-2">
-                <form
-                  onSubmit={handleAddSpecialCharge}
-                  className="rounded-2xl border border-purple-500/30 bg-[#0D1322] p-5 space-y-3.5"
-                >
+              <div className="rounded-2xl border border-purple-500/30 bg-[#0D1322] p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <h3 className="text-base font-bold text-white">
-                      {t("Crear Cobro de Torneo / Actividad Especial", "Create Tournament / Special Activity Fee")}
+                      {t("Actividades / Torneos Activos", "Active Special Fees")} ({(state.specialCharges ?? []).length})
                     </h3>
                     <p className="text-xs text-slate-400 mt-0.5">
                       {t(
@@ -3318,110 +3317,51 @@ export function CoachDashboard({
                       )}
                     </p>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="sm:col-span-2">
-                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                        {t("Nombre del Torneo o Actividad *", "Tournament / Activity Name *")}
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={chargeTitle}
-                        onChange={(e) => setChargeTitle(e.target.value)}
-                        placeholder="Ej. Inscripción Copa Nacional 2026"
-                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                        {t("Monto ($) *", "Amount ($) *")}
-                      </label>
-                      <input
-                        type="number"
-                        required
-                        min={0.01}
-                        step="0.01"
-                        value={chargeAmount}
-                        onChange={(e) => setChargeAmount(e.target.value)}
-                        placeholder="0.00"
-                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                        {t("Fecha límite (opcional)", "Due date (optional)")}
-                      </label>
-                      <input
-                        type="date"
-                        value={chargeDueDate}
-                        onChange={(e) => setChargeDueDate(e.target.value)}
-                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white [color-scheme:dark]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                        {t("Descripción (opcional)", "Description (optional)")}
-                      </label>
-                      <input
-                        type="text"
-                        value={chargeDesc}
-                        onChange={(e) => setChargeDesc(e.target.value)}
-                        placeholder="Detalle de la actividad"
-                        className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3 py-2 text-xs text-white"
-                      />
-                    </div>
-                  </div>
                   <button
-                    type="submit"
-                    className="w-full rounded-xl bg-[#7E3D97] py-2.5 text-xs font-extrabold text-white hover:bg-[#914BAE] cursor-pointer"
+                    type="button"
+                    onClick={() => setSpecialChargeModalOpen(true)}
+                    className="shrink-0 rounded-xl bg-[#7E3D97] px-4 py-2.5 text-xs font-extrabold text-white shadow-lg shadow-[#7E3D97]/25 hover:bg-[#914BAE] transition-colors cursor-pointer"
                   >
-                    + {t("Publicar Cobro para Atletas", "Publish Fee for Athletes")}
+                    + {t("Crear Cobro de Torneo / Actividad Especial", "Create Tournament / Special Activity Fee")}
                   </button>
-                </form>
-
-                <div className="rounded-2xl border border-white/10 bg-[#0D1322] p-5 space-y-3">
-                  <h3 className="text-base font-bold text-white">
-                    {t("Actividades / Torneos Activos", "Active Special Fees")} ({(state.specialCharges ?? []).length})
-                  </h3>
-                  {(state.specialCharges ?? []).length === 0 ? (
-                    <p className="py-8 text-center text-xs text-slate-400">
-                      {t("No hay cobros extraordinarios activos.", "No active special fees.")}
-                    </p>
-                  ) : (
-                    <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-                      {(state.specialCharges ?? []).map((chg) => (
-                        <div
-                          key={chg.id}
-                          className="flex items-start justify-between gap-3 rounded-xl border border-purple-500/25 bg-[#070B14]/80 p-3 text-xs"
-                        >
-                          <div className="min-w-0 space-y-0.5">
-                            <p className="font-bold text-white">{chg.title}</p>
-                            {chg.description && <p className="text-[11px] text-slate-300">{chg.description}</p>}
-                            {chg.dueDate && (
-                              <p className="text-[10px] font-mono text-amber-300">
-                                {t("Fecha límite:", "Due:")} {chg.dueDate}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-mono text-sm font-extrabold text-purple-200">
-                              ${chg.amount.toFixed(2)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteSpecialCharge(chg.id)}
-                              className="rounded-lg border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
+
+                {(state.specialCharges ?? []).length === 0 ? (
+                  <p className="py-6 text-center text-xs text-slate-400">
+                    {t("No hay cobros extraordinarios activos.", "No active special fees.")}
+                  </p>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2 max-h-60 overflow-y-auto pr-1">
+                    {(state.specialCharges ?? []).map((chg) => (
+                      <div
+                        key={chg.id}
+                        className="flex items-start justify-between gap-3 rounded-xl border border-purple-500/25 bg-[#070B14]/80 p-3 text-xs"
+                      >
+                        <div className="min-w-0 space-y-0.5">
+                          <p className="font-bold text-white">{chg.title}</p>
+                          {chg.description && <p className="text-[11px] text-slate-300">{chg.description}</p>}
+                          {chg.dueDate && (
+                            <p className="text-[10px] font-mono text-amber-300">
+                              {t("Fecha límite:", "Due:")} {chg.dueDate}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-mono text-sm font-extrabold text-purple-200">
+                            ${chg.amount.toFixed(2)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSpecialCharge(chg.id)}
+                            className="rounded-lg border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Comprobantes de Pago Recibidos */}
@@ -5309,6 +5249,115 @@ export function CoachDashboard({
                 className="rounded-xl bg-amber-400 px-4 py-2 text-xs font-bold text-slate-950 cursor-pointer"
               >
                 Formalizar y Generar Usuario
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* MODAL: Crear Cobro de Torneo / Actividad Especial */}
+      {specialChargeModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => setSpecialChargeModalOpen(false)}
+        >
+          <form
+            onSubmit={handleAddSpecialCharge}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg rounded-2xl border border-purple-500/40 bg-[#0D1322] p-6 space-y-4 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-extrabold text-white">
+                  {t("Crear Cobro de Torneo / Actividad Especial", "Create Tournament / Special Activity Fee")}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {t(
+                    "Los cobros creados aquí aparecerán automáticamente en el Método de Pago de los atletas.",
+                    "Fees created here will automatically appear in the athletes' Payment Method module."
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSpecialChargeModalOpen(false)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs text-white hover:bg-white/20 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
+                  {t("Nombre del Torneo o Actividad *", "Tournament / Activity Name *")}
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={chargeTitle}
+                  onChange={(e) => setChargeTitle(e.target.value)}
+                  placeholder="Ej. Inscripción Copa Nacional 2026"
+                  className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-purple-400 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
+                  {t("Monto ($) *", "Amount ($) *")}
+                </label>
+                <input
+                  type="number"
+                  required
+                  min={0.01}
+                  step="0.01"
+                  value={chargeAmount}
+                  onChange={(e) => setChargeAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-purple-400 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
+                  {t("Fecha límite (opcional)", "Due date (optional)")}
+                </label>
+                <input
+                  type="date"
+                  value={chargeDueDate}
+                  onChange={(e) => setChargeDueDate(e.target.value)}
+                  className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white [color-scheme:dark] focus:border-purple-400 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
+                  {t("Descripción (opcional)", "Description (optional)")}
+                </label>
+                <input
+                  type="text"
+                  value={chargeDesc}
+                  onChange={(e) => setChargeDesc(e.target.value)}
+                  placeholder="Detalle de la actividad"
+                  className="w-full rounded-xl border border-white/15 bg-[#070B14] px-3.5 py-2.5 text-sm text-white focus:border-purple-400 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setSpecialChargeModalOpen(false)}
+                className="rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/5 cursor-pointer"
+              >
+                {t("Cancelar", "Cancel")}
+              </button>
+              <button
+                type="submit"
+                className="rounded-xl bg-[#7E3D97] px-5 py-2 text-xs font-extrabold text-white hover:bg-[#914BAE] cursor-pointer"
+              >
+                + {t("Publicar Cobro para Atletas", "Publish Fee for Athletes")}
               </button>
             </div>
           </form>
